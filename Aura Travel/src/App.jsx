@@ -8,7 +8,7 @@ function App() {
 
   return (
     <div>
-      <h1>Kodo Takai - App Turística</h1>
+      <h1>Aura Travel - App Turística</h1>
       <p>Proyecto en React</p>
     </div>
   )
