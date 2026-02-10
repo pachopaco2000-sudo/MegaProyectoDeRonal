@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getDestinos } from "../services/api";
+import TarjetaDestino from "../components/TarjetaDestino";
 
 function Destinos() {
     const [destinos, setDestinos] = useState([]);
@@ -9,15 +10,14 @@ function Destinos() {
     }, []);
 
     return (
-        <div>
+        <div style={{ padding: "20px" }}>
             <h2>Destinos turísticos</h2>
-            <ul>
+
+            <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
                 {destinos.map((d) => (
-                    <li key={d.id}>
-                        <strong>{d.nombre}</strong> - {d.descripcion}
-                    </li>
+                    <TarjetaDestino key={d.id} destino={d} />
                 ))}
-            </ul>
+            </div>
         </div>
     );
 }
