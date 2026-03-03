@@ -1,21 +1,18 @@
 import React, { useState } from 'react';
-// Importamos los componentes que creaste por aparte
 import Explorar from './Explorar';
 import Itinerario from './Itinerario';
 import Alertas from './Alertas';
 import Perfil from './Perfil';
 
 const Destinos = () => {
-    // Estado para controlar qué vista mostrar
     const [seccionActiva, setSeccionActiva] = useState('inicio');
 
     const destinosDestacados = [
-        { id: 1, nombre: 'Santorini, Grecia', rating: 4.9, img: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=600' },
-        { id: 2, nombre: 'Bali, Indonesia', rating: 4.8, img: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600' },
-        { id: 3, nombre: 'Cartagena, Colombia', rating: 4.7, img: 'https://images.unsplash.com/photo-1583531172005-814191b8b6c0?w=600' }
+        { id: 1, nombre: 'Santorini, Grecia', rating: 4.9, img: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=600', precio: '€850' },
+        { id: 2, nombre: 'Bali, Indonesia', rating: 4.8, img: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600', precio: '€1,200' },
+        { id: 3, nombre: 'Cartagena, Colombia', rating: 4.7, img: 'https://images.unsplash.com/photo-1583531172005-814191b8b6c0?w=600', precio: '€750' }
     ];
 
-    // Función que decide qué contenido renderizar en el centro
     const renderContent = () => {
         switch (seccionActiva) {
             case 'explorar': return <Explorar />;
@@ -23,51 +20,80 @@ const Destinos = () => {
             case 'alertas': return <Alertas />;
             case 'perfil': return <Perfil />;
             default: return (
-                <div className="anim-fade">
+                <div className="anim-fade" style={{ paddingBottom: '20px' }}>
+                    {/* Header Premium */}
                     <header style={styles.header}>
-                        <div>
-                            <p style={styles.welcomeText}>¡Hola de nuevo!</p>
-                            <h1 style={styles.userName}>Ana García</h1>
+                        <div style={styles.headerContent}>
+                            <div>
+                                <p style={styles.welcomeText}>¡Hola de nuevo!</p>
+                                <h1 style={styles.userName}>Ana García</h1>
+                            </div>
+                            <div style={styles.profileWrapper}>
+                                <img src="https://i.pravatar.cc/150?u=ana" alt="Perfil" style={styles.profilePic} />
+                                <div style={styles.onlineBadge}></div>
+                            </div>
                         </div>
-                        <img src="https://i.pravatar.cc/150?u=ana" alt="Perfil" style={styles.profilePic} />
                     </header>
 
-                    <div style={styles.searchContainer}>
-                        <input type="text" placeholder="Buscar destinos..." style={styles.searchInput} />
-                    </div>
-
-                    <div style={styles.iaCard}>
-                        <div style={styles.iaIcon}>✨</div>
-                        <div style={styles.iaContent}>
-                            <h3 style={styles.iaTitle}>Aura AI te recomienda</h3>
-                            <p style={styles.iaSubtitle}>Basado en tus preferencias, Santorini es perfecta para tu próximo viaje</p>
-                            <button style={styles.iaButton}>Explorar con IA</button>
-                        </div>
-                    </div>
-
-                    <div style={styles.statsRow}>
-                        <div style={styles.statCard}><span>📅</span><h2 style={styles.statValue}>1</h2><p style={styles.statLabel}>Reserva activa</p></div>
-                        <div style={styles.statCard}><span>📍</span><h2 style={styles.statValue}>5</h2><p style={styles.statLabel}>Favoritos</p></div>
-                        <div style={styles.statCard}><span>📈</span><h2 style={styles.statValue}>3</h2><p style={styles.statLabel}>Itinerarios</p></div>
-                    </div>
-
-                    <div style={styles.sectionHeader}>
-                        <h2 style={styles.sectionTitle}>Destinos destacados</h2>
-                        <span style={styles.viewAll}>Ver todos</span>
-                    </div>
-
-                    <div style={styles.destinosGrid}>
-                        {destinosDestacados.map(dest => (
-                            <div key={dest.id} style={styles.destCard}>
-                                <div style={styles.destImgContainer}>
-                                    <img src={dest.img} alt={dest.nombre} style={styles.destImg} />
-                                    <div style={styles.ratingBadge}>⭐ {dest.rating}</div>
-                                </div>
-                                <div style={styles.destInfo}>
-                                    <h3 style={styles.destName}>{dest.nombre}</h3>
-                                </div>
+                    <div style={styles.mainContent}>
+                        {/* Search Bar con Icono */}
+                        <div style={styles.searchContainer}>
+                            <div style={styles.searchInputWrapper}>
+                                <span style={styles.searchIcon}>🔍</span>
+                                <input type="text" placeholder="¿A dónde quieres ir?" style={styles.searchInput} />
                             </div>
-                        ))}
+                        </div>
+
+
+                        <div style={styles.iaCard}>
+                            <div style={styles.iaIconWrapper}>✨</div>
+                            <div style={styles.iaContent}>
+                                <h3 style={styles.iaTitle}>Aura AI Sugerencia</h3>
+                                <p style={styles.iaSubtitle}>Santorini tiene un 15% de descuento hoy. ¡Es el momento!</p>
+                                <button style={styles.iaButton}>Ver oferta</button>
+                            </div>
+                        </div>
+
+
+                        <div style={styles.statsRow}>
+                            <div style={styles.statCard}>
+                                <div style={{ ...styles.statIconBg, backgroundColor: '#eef2ff' }}>📅</div>
+                                <h2 style={styles.statValue}>1</h2>
+                                <p style={styles.statLabel}>Reserva</p>
+                            </div>
+                            <div style={styles.statCard}>
+                                <div style={{ ...styles.statIconBg, backgroundColor: '#fdf2f8' }}>📍</div>
+                                <h2 style={styles.statValue}>5</h2>
+                                <p style={styles.statLabel}>Favoritos</p>
+                            </div>
+                            <div style={styles.statCard}>
+                                <div style={{ ...styles.statIconBg, backgroundColor: '#f0fdf4' }}>📈</div>
+                                <h2 style={styles.statValue}>3</h2>
+                                <p style={styles.statLabel}>Viajes</p>
+                            </div>
+                        </div>
+
+                        {/* Sección Destinos */}
+                        <div style={styles.sectionHeader}>
+                            <h2 style={styles.sectionTitle}>Destinos del Momento</h2>
+                            <button style={styles.viewAllBtn}>Ver todos</button>
+                        </div>
+
+                        <div style={styles.destinosGrid}>
+                            {destinosDestacados.map(dest => (
+                                <div key={dest.id} style={styles.destCard}>
+                                    <div style={styles.destImgContainer}>
+                                        <img src={dest.img} alt={dest.nombre} style={styles.destImg} />
+                                        <div style={styles.ratingBadge}>⭐ {dest.rating}</div>
+                                        <div style={styles.priceOverlay}>{dest.precio}</div>
+                                    </div>
+                                    <div style={styles.destInfo}>
+                                        <h3 style={styles.destName}>{dest.nombre}</h3>
+                                        <p style={styles.destLocation}>Click para ver itinerario</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             );
@@ -77,75 +103,98 @@ const Destinos = () => {
     return (
         <div style={styles.container}>
             <style>{`
-                @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-                .anim-fade { animation: fadeIn 0.4s ease-out forwards; }
+                @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+                .anim-fade { animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+                input:focus { outline: none; border: 1.5px solid #6366f1 !important; }
             `}</style>
 
-            {/* Contenido Dinámico */}
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, overflowY: 'auto' }}>
                 {renderContent()}
             </div>
 
-            {/* Barra de Navegación Inferior Funcional */}
+
             <nav style={styles.bottomNav}>
-                <div onClick={() => setSeccionActiva('inicio')} style={{ ...styles.navItem, color: seccionActiva === 'inicio' ? '#6366f1' : '#94a3b8' }}>
-                    <span style={styles.navIcon}>🏠</span>
-                    <span style={styles.navLabel}>Inicio</span>
-                </div>
-                <div onClick={() => setSeccionActiva('explorar')} style={{ ...styles.navItem, color: seccionActiva === 'explorar' ? '#6366f1' : '#94a3b8' }}>
-                    <span style={styles.navIcon}>🧭</span>
-                    <span style={styles.navLabel}>Explorar</span>
-                </div>
-                <div onClick={() => setSeccionActiva('itinerario')} style={{ ...styles.navItem, color: seccionActiva === 'itinerario' ? '#6366f1' : '#94a3b8' }}>
-                    <span style={styles.navIcon}>🗺️</span>
-                    <span style={styles.navLabel}>Itinerario</span>
-                </div>
-                <div onClick={() => setSeccionActiva('alertas')} style={{ ...styles.navItem, color: seccionActiva === 'alertas' ? '#6366f1' : '#94a3b8' }}>
-                    <span style={styles.navIcon}>🔔</span>
-                    <span style={styles.navLabel}>Alertas</span>
-                </div>
-                <div onClick={() => setSeccionActiva('perfil')} style={{ ...styles.navItem, color: seccionActiva === 'perfil' ? '#6366f1' : '#94a3b8' }}>
-                    <span style={styles.navIcon}>👤</span>
-                    <span style={styles.navLabel}>Perfil</span>
-                </div>
+                <NavItem active={seccionActiva === 'inicio'} onClick={() => setSeccionActiva('inicio')} icon="🏠" label="Inicio" />
+                <NavItem active={seccionActiva === 'explorar'} onClick={() => setSeccionActiva('explorar')} icon="🧭" label="Explorar" />
+                <NavItem active={seccionActiva === 'itinerario'} onClick={() => setSeccionActiva('itinerario')} icon="🗺️" label="Plan" />
+                <NavItem active={seccionActiva === 'alertas'} onClick={() => setSeccionActiva('alertas')} icon="🔔" label="Alertas" />
+                <NavItem active={seccionActiva === 'perfil'} onClick={() => setSeccionActiva('perfil')} icon="👤" label="Perfil" />
             </nav>
         </div>
     );
 };
 
-// ... (Tus estilos se mantienen iguales)
+
+const NavItem = ({ active, onClick, icon, label }) => (
+    <div onClick={onClick} style={{ ...styles.navItem, color: active ? '#6366f1' : '#94a3b8' }}>
+        <span style={{ fontSize: '22px', transform: active ? 'scale(1.2)' : 'scale(1)', transition: '0.3s' }}>{icon}</span>
+        <span style={{ fontSize: '10px', fontWeight: active ? 'bold' : '500', marginTop: '4px' }}>{label}</span>
+        {active && <div style={styles.navIndicator}></div>}
+    </div>
+);
+
 const styles = {
-    container: { backgroundColor: '#f8fafc', minHeight: '100vh', padding: '20px 20px 100px 20px', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: 'linear-gradient(90deg, #6366f1 0%, #a855f7 100%)', margin: '-20px -20px 20px -20px', padding: '40px 20px 60px 20px', color: 'white', borderBottomLeftRadius: '30px', borderBottomRightRadius: '30px' },
-    welcomeText: { fontSize: '14px', opacity: 0.9, margin: 0 },
-    userName: { fontSize: '24px', fontWeight: 'bold', margin: 0 },
-    profilePic: { width: '45px', height: '45px', borderRadius: '50%', border: '2px solid white' },
-    searchContainer: { marginTop: '-45px', marginBottom: '25px' },
-    searchInput: { width: '100%', padding: '15px 20px', borderRadius: '15px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', fontSize: '16px', boxSizing: 'border-box' },
-    iaCard: { backgroundColor: '#f3f4ff', borderRadius: '20px', padding: '20px', display: 'flex', gap: '15px', marginBottom: '25px', border: '1px solid #e0e4ff' },
-    iaIcon: { width: '40px', height: '40px', backgroundColor: '#6366f1', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '20px' },
-    iaTitle: { margin: '0 0 5px 0', fontSize: '16px', fontWeight: 'bold', color: '#1e293b' },
-    iaSubtitle: { margin: '0 0 15px 0', fontSize: '13px', color: '#64748b', lineHeight: '1.4' },
-    iaButton: { backgroundColor: '#10b981', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
-    statsRow: { display: 'flex', gap: '15px', marginBottom: '30px' },
-    statCard: { flex: 1, backgroundColor: 'white', padding: '15px', borderRadius: '20px', textAlign: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.02)' },
-    statIcon: { fontSize: '20px', display: 'block', marginBottom: '5px' },
-    statValue: { fontSize: '22px', fontWeight: 'bold', margin: '5px 0', color: '#1e293b' },
-    statLabel: { fontSize: '12px', color: '#94a3b8', margin: 0 },
-    sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' },
-    sectionTitle: { fontSize: '18px', fontWeight: 'bold', color: '#1e293b', margin: 0 },
-    viewAll: { fontSize: '14px', color: '#6366f1', fontWeight: '600' },
+    container: { backgroundColor: '#fcfcfd', minHeight: '100vh', fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", display: 'flex', flexDirection: 'column' },
+
+
+    header: {
+        background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+        padding: '60px 24px 80px 24px',
+        borderBottomLeftRadius: '40px',
+        borderBottomRightRadius: '40px',
+        boxShadow: '0 10px 30px rgba(79, 70, 229, 0.2)'
+    },
+    headerContent: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+    welcomeText: { color: 'rgba(255,255,255,0.8)', fontSize: '14px', margin: 0, fontWeight: '500' },
+    userName: { color: 'white', fontSize: '28px', margin: '4px 0 0 0', fontWeight: '800', letterSpacing: '-0.5px' },
+    profileWrapper: { position: 'relative' },
+    profilePic: { width: '50px', height: '50px', borderRadius: '16px', border: '2px solid rgba(255,255,255,0.3)', objectFit: 'cover' },
+    onlineBadge: { position: 'absolute', bottom: -2, right: -2, width: '12px', height: '12px', backgroundColor: '#22c55e', borderRadius: '50%', border: '2px solid white' },
+
+    mainContent: { padding: '0 24px' },
+
+    // Search Bar
+    searchContainer: { marginTop: '-30px', marginBottom: '24px' },
+    searchInputWrapper: { position: 'relative', display: 'flex', alignItems: 'center' },
+    searchIcon: { position: 'absolute', left: '16px', fontSize: '18px' },
+    searchInput: { width: '100%', padding: '18px 18px 18px 48px', borderRadius: '20px', border: 'none', backgroundColor: 'white', boxShadow: '0 15px 35px rgba(0,0,0,0.05)', fontSize: '16px', transition: '0.3s' },
+
+    // IA Card Pro
+    iaCard: {
+        background: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)',
+        borderRadius: '24px', padding: '24px', display: 'flex', gap: '16px', marginBottom: '32px',
+        color: 'white', position: 'relative', overflow: 'hidden'
+    },
+    iaIconWrapper: { width: '48px', height: '48px', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' },
+    iaTitle: { margin: 0, fontSize: '18px', fontWeight: '700' },
+    iaSubtitle: { margin: '8px 0 16px 0', fontSize: '14px', opacity: 0.9, lineHeight: '1.5' },
+    iaButton: { backgroundColor: '#10b981', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' },
+
+    // Stats
+    statsRow: { display: 'flex', gap: '16px', marginBottom: '32px' },
+    statCard: { flex: 1, backgroundColor: 'white', padding: '20px', borderRadius: '24px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.02)' },
+    statIconBg: { width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: '18px' },
+    statValue: { fontSize: '24px', fontWeight: '800', margin: 0, color: '#1e293b' },
+    statLabel: { fontSize: '12px', color: '#64748b', margin: '4px 0 0 0', fontWeight: '600' },
+
+    // Destinos Grid
+    sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
+    sectionTitle: { fontSize: '20px', fontWeight: '800', color: '#1e293b', margin: 0 },
+    viewAllBtn: { background: 'none', border: 'none', color: '#6366f1', fontWeight: '700', cursor: 'pointer' },
     destinosGrid: { display: 'flex', flexDirection: 'column', gap: '20px' },
-    destCard: { backgroundColor: 'white', borderRadius: '25px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' },
-    destImgContainer: { position: 'relative', height: '180px' },
+    destCard: { backgroundColor: 'white', borderRadius: '28px', overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9' },
+    destImgContainer: { position: 'relative', height: '220px' },
     destImg: { width: '100%', height: '100%', objectFit: 'cover' },
-    ratingBadge: { position: 'absolute', top: '15px', right: '15px', backgroundColor: 'white', padding: '4px 10px', borderRadius: '12px', fontWeight: 'bold', fontSize: '12px' },
-    destInfo: { padding: '15px' },
-    destName: { margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#1e293b' },
-    bottomNav: { position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: 'white', display: 'flex', justifyContent: 'space-around', padding: '15px 10px', borderTop: '1px solid #f1f5f9', zIndex: 100 },
-    navItem: { display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', transition: 'color 0.3s ease' },
-    navIcon: { fontSize: '20px', marginBottom: '4px' },
-    navLabel: { fontSize: '11px', fontWeight: '600' }
+    ratingBadge: { position: 'absolute', top: '16px', right: '16px', backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(4px)', padding: '6px 12px', borderRadius: '12px', fontWeight: 'bold', fontSize: '12px', color: '#1e293b' },
+    priceOverlay: { position: 'absolute', bottom: '16px', left: '16px', backgroundColor: '#6366f1', color: 'white', padding: '6px 14px', borderRadius: '12px', fontWeight: 'bold', fontSize: '14px' },
+    destInfo: { padding: '20px' },
+    destName: { margin: 0, fontSize: '18px', fontWeight: '700', color: '#1e293b' },
+    destLocation: { margin: '4px 0 0 0', fontSize: '13px', color: '#94a3b8' },
+
+    // Bottom Nav
+    bottomNav: { position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(20px)', display: 'flex', justifyContent: 'space-around', padding: '12px 16px 24px 16px', borderTop: '1px solid #f1f5f9', zIndex: 100 },
+    navItem: { display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', flex: 1, position: 'relative' },
+    navIndicator: { position: 'absolute', bottom: '-8px', width: '4px', height: '4px', backgroundColor: '#6366f1', borderRadius: '50%' }
 };
 
 export default Destinos;

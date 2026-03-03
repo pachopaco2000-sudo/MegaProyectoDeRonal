@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import Destinos from './Destinos'; // Importamos la nueva pantalla
+import Destinos from './Destinos';
 
 const Login = () => {
     const [mode, setMode] = useState('login');
     const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-    // Estados para validación
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
 
-    // Validación simple: campos no vacíos y email con @
+
     const isFormValid = mode === 'login'
         ? email.includes('@') && password.length > 5
         : name.length > 2 && email.includes('@') && password.length > 5;
@@ -23,9 +23,9 @@ const Login = () => {
 
         if (mode === 'register') {
             alert("¡Cuenta creada con éxito! Ahora puedes iniciar sesión.");
-            setMode('login'); // Te manda a inicio de sesión tras registrarte
+            setMode('login');
         } else if (mode === 'login') {
-            setIsLoggedIn(true); // Te manda a Destinos
+            setIsLoggedIn(true);
         } else {
             alert("Instrucciones enviadas al correo");
             setMode('login');
@@ -96,7 +96,7 @@ const Login = () => {
     );
 };
 
-// ... (Los estilos se mantienen igual que tu versión anterior)
+
 const styles = {
     authContainer: { height: '100vh', display: 'flex', backgroundColor: '#fcfcfd', fontFamily: 'system-ui, sans-serif' },
     infoSide: { flex: 1.2, padding: '60px', display: 'flex', flexDirection: 'column', justifyContent: 'center', backgroundColor: '#fff', borderRight: '1px solid #f1f5f9' },
