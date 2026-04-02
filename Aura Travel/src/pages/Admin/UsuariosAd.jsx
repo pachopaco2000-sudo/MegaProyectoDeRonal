@@ -1,59 +1,123 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../services/supabaseClient';
 
 const UsuariosAd = () => {
     const [searchTerm, setSearchTerm] = useState('');
-    const [users, setUsers] = useState([
-        { id: 1, name: 'Ana García', email: 'ana@example.com', role: 'Usuario', status: 'Activo', reservations: 3, color: '#6366f1' },
-        { id: 2, name: 'Carlos López', email: 'carlos@example.com', role: 'Usuario', status: 'Activo', reservations: 5, color: '#a78bfa' },
-        { id: 3, name: 'María Torres', email: 'maria@example.com', role: 'Usuario', status: 'Bloqueado', reservations: 0, color: '#f43f5e' },
-        { id: 4, name: 'Admin User', email: 'admin@example.com', role: 'Administrador', status: 'Activo', reservations: 0, color: '#0f172a' }
-    ]);
+    const [users, setUsers] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
+    const defaultForm = { name: '', email: '', role: 'Usuario', status: 'Activo' };
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
-    const [formData, setFormData] = useState({ name: '', email: '', role: 'Usuario', status: 'Activo' });
+    const [formData, setFormData] = useState(defaultForm);
+
+    useEffect(() => {
+        fetchUsers();
+    }, []);
+
+    const fetchUsers = async () => {
+        setIsLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('Usuarios')
+                .select('*')
+                .order('id', { ascending: false });
+            
+            if (error) throw error;
+            setUsers(data || []);
+        } catch (error) {
+            console.error("Error al obtener usuarios:", error);
+            alert("Hubo un error al obtener la lista de usuarios.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const filteredUsers = users.filter(u =>
-        u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchTerm.toLowerCase())
+        u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const handleOpenModal = (user = null) => {
         if (user) {
             setCurrentUser(user);
-            setFormData({ name: user.name, email: user.email, role: user.role, status: user.status });
+            setFormData({ name: user.name || '', email: user.email || '', role: user.role || 'Usuario', status: user.status || 'Activo' });
         } else {
             setCurrentUser(null);
-            setFormData({ name: '', email: '', role: 'Usuario', status: 'Activo' });
+            setFormData(defaultForm);
         }
         setIsModalOpen(true);
     };
 
-    const handleSave = (e) => {
+    const handleSave = async (e) => {
         e.preventDefault();
-        if (currentUser) {
-            setUsers(users.map(u => u.id === currentUser.id ? { ...u, ...formData } : u));
-        } else {
-            const newUser = {
-                ...formData,
-                id: Date.now(),
-                reservations: 0,
-                color: '#' + Math.floor(Math.random() * 16777215).toString(16)
+        setIsLoading(true);
+        
+        try {
+            const payload = {
+                name: formData.name,
+                email: formData.email,
+                role: formData.role,
+                status: formData.status
             };
-            setUsers([...users, newUser]);
+
+            if (currentUser) {
+                const { error } = await supabase
+                    .from('Usuarios')
+                    .update(payload)
+                    .eq('id', currentUser.id);
+                if (error) throw error;
+            } else {
+                payload.reservations = 0;
+                payload.color = '#' + Math.floor(Math.random() * 16777215).toString(16);
+                const { error } = await supabase
+                    .from('Usuarios')
+                    .insert([payload]);
+                if (error) throw error;
+            }
+            
+            setIsModalOpen(false);
+            setFormData(defaultForm);
+            fetchUsers();
+        } catch (error) {
+            console.error("Error guardando usuario:", error);
+            alert("No se pudo guardar el usuario: " + error.message);
+        } finally {
+            setIsLoading(false);
         }
-        setIsModalOpen(false);
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (window.confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
-            setUsers(users.filter(u => u.id !== id));
+            setIsLoading(true);
+            try {
+                const { error } = await supabase
+                    .from('Usuarios')
+                    .delete()
+                    .eq('id', id);
+                if (error) throw error;
+                fetchUsers();
+            } catch (error) {
+                console.error("Error eliminando usuario:", error);
+                alert("Hubo un error al eliminar el usuario");
+                setIsLoading(false);
+            }
         }
     };
 
-    const handleStatusToggle = (user) => {
+    const handleStatusToggle = async (user) => {
         const newStatus = user.status === 'Activo' ? 'Bloqueado' : 'Activo';
-        setUsers(users.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
+        try {
+            const { error } = await supabase
+                .from('Usuarios')
+                .update({ status: newStatus })
+                .eq('id', user.id);
+            if (error) throw error;
+            fetchUsers();
+        } catch (error) {
+            console.error("Error al actualizar el estado:", error);
+            alert("No se pudo actualizar el estado del usuario.");
+        }
     };
 
     return (
@@ -61,7 +125,7 @@ const UsuariosAd = () => {
             <header style={styles.header}>
                 <div>
                     <h2 style={styles.title}>Gestión de Usuarios</h2>
-                    <p style={styles.subtitle}>Administra todos los usuarios del sistema</p>
+                    <p style={styles.subtitle}>Administra todos los perfiles en Supabase</p>
                 </div>
                 <button style={styles.addBtn} onClick={() => handleOpenModal()}>+ Nuevo Usuario</button>
             </header>
@@ -71,7 +135,7 @@ const UsuariosAd = () => {
                     <span style={{ color: '#94a3b8' }}>🔍</span>
                     <input
                         type="text"
-                        placeholder="Buscar usuarios..."
+                        placeholder="Buscar usuarios por nombre o email..."
                         style={styles.input}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -79,33 +143,45 @@ const UsuariosAd = () => {
                 </div>
             </div>
 
-            <div style={styles.list}>
-                {filteredUsers.map(user => (
-                    <div key={user.id} style={styles.userCard}>
-                        <div style={{ ...styles.avatar, backgroundColor: user.color }}>{user.name.charAt(0)}</div>
-                        <div style={styles.userInfo}>
-                            <div style={styles.nameRow}>
-                                <h3 style={styles.userName}>{user.name}</h3>
-                                <span style={{ ...styles.badge, backgroundColor: user.role === 'Administrador' ? '#6366f1' : '#2dd4bf', color: '#fff' }}>
-                                    {user.role}
-                                </span>
-                                <span style={{ ...styles.badge, backgroundColor: user.status === 'Activo' ? '#2dd4bf22' : '#f43f5e22', color: user.status === 'Activo' ? '#0d9488' : '#e11d48' }}>
-                                    {user.status}
-                                </span>
+            {isLoading && users.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                    Cargando usuarios... ⏳
+                </div>
+            ) : (
+                <div style={styles.list}>
+                    {filteredUsers.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>No se encontraron usuarios.</div>
+                    ) : (
+                        filteredUsers.map(user => (
+                            <div key={user.id} style={styles.userCard}>
+                                <div style={{ ...styles.avatar, backgroundColor: user.color || '#6366f1' }}>
+                                    {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                                </div>
+                                <div style={styles.userInfo}>
+                                    <div style={styles.nameRow}>
+                                        <h3 style={styles.userName}>{user.name}</h3>
+                                        <span style={{ ...styles.badge, backgroundColor: user.role === 'Administrador' ? '#6366f1' : '#2dd4bf', color: '#fff' }}>
+                                            {user.role}
+                                        </span>
+                                        <span style={{ ...styles.badge, backgroundColor: user.status === 'Activo' ? '#2dd4bf22' : '#f43f5e22', color: user.status === 'Activo' ? '#0d9488' : '#e11d48' }}>
+                                            {user.status}
+                                        </span>
+                                    </div>
+                                    <div style={styles.userEmail}>{user.email}</div>
+                                    <div style={styles.userMeta}>{user.reservations || 0} reservas realizadas</div>
+                                </div>
+                                <div style={styles.actions}>
+                                    <button style={styles.actionBtn} onClick={() => handleOpenModal(user)} title="Editar">📝</button>
+                                    <button style={styles.actionBtn} onClick={() => handleStatusToggle(user)} title={user.status === 'Activo' ? 'Bloquear' : 'Activar'}>
+                                        {user.status === 'Activo' ? '🚫' : '✅'}
+                                    </button>
+                                    <button style={{ ...styles.actionBtn, color: '#f43f5e' }} onClick={() => handleDelete(user.id)} title="Eliminar">🗑️</button>
+                                </div>
                             </div>
-                            <div style={styles.userEmail}>{user.email}</div>
-                            <div style={styles.userMeta}>{user.reservations} reservas realizadas</div>
-                        </div>
-                        <div style={styles.actions}>
-                            <button style={styles.actionBtn} onClick={() => handleOpenModal(user)} title="Editar">📝</button>
-                            <button style={styles.actionBtn} onClick={() => handleStatusToggle(user)} title={user.status === 'Activo' ? 'Bloquear' : 'Activar'}>
-                                {user.status === 'Activo' ? '🚫' : '✅'}
-                            </button>
-                            <button style={{ ...styles.actionBtn, color: '#f43f5e' }} onClick={() => handleDelete(user.id)} title="Eliminar">🗑️</button>
-                        </div>
-                    </div>
-                ))}
-            </div>
+                        ))
+                    )}
+                </div>
+            )}
 
             {isModalOpen && (
                 <div style={styles.modalOverlay}>
@@ -154,8 +230,10 @@ const UsuariosAd = () => {
                                 </select>
                             </div>
                             <div style={styles.modalActions}>
-                                <button type="button" style={styles.cancelBtn} onClick={() => setIsModalOpen(false)}>Cancelar</button>
-                                <button type="submit" style={styles.saveBtn}>Guardar</button>
+                                <button type="button" style={styles.cancelBtn} onClick={() => setIsModalOpen(false)} disabled={isLoading}>Cancelar</button>
+                                <button type="submit" style={{...styles.saveBtn, opacity: isLoading ? 0.7 : 1}} disabled={isLoading}>
+                                    {isLoading ? 'Guardando...' : 'Guardar'}
+                                </button>
                             </div>
                         </form>
                     </div>

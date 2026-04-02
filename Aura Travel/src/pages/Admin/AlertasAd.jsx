@@ -1,33 +1,68 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../services/supabaseClient';
 
 const AlertasAd = () => {
-    const alerts = [
-        { id: 1, title: 'Nueva reserva recibida', message: 'Ana García ha reservado un viaje a Santorini.', time: 'Hace 5 min', type: 'info', icon: '🔔' },
-        { id: 2, title: 'Error en servidor', message: 'Se detectó un error al cargar los destinos.', time: 'Hace 30 min', type: 'error', icon: '⚠️' }
-    ];
+    const [alerts, setAlerts] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchAlertas = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('Alertas')
+                    .select('*')
+                    .order('fecha', { ascending: false });
+                
+                if (error) throw error;
+                // Si la base de datos está vacía, mostrar mensaje
+                setAlerts(data || []);
+            } catch (error) {
+                console.error("Error cargando alertas:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchAlertas();
+    }, []);
+
+    const formatTime = (dateString) => {
+        if (!dateString) return 'Reciente';
+        const date = new Date(dateString);
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
 
     return (
         <div style={styles.content}>
             <header style={styles.header}>
                 <div>
                     <h2 style={styles.title}>Centro de Alertas</h2>
-                    <p style={styles.subtitle}>Notificaciones del sistema</p>
+                    <p style={styles.subtitle}>Notificaciones del sistema en tiempo real</p>
                 </div>
             </header>
 
             <div style={styles.list}>
-                {alerts.map(alert => (
-                    <div key={alert.id} style={styles.card}>
-                        <div style={{ ...styles.icon, backgroundColor: alert.type === 'error' ? '#f43f5e15' : '#6366f115', color: alert.type === 'error' ? '#f43f5e' : '#6366f1' }}>
-                            {alert.icon}
+                {isLoading ? (
+                    <div style={{ padding: '20px', color: '#64748b' }}>Cargando alertas... ⏳</div>
+                ) : alerts.length === 0 ? (
+                    <div style={{ padding: '20px', color: '#64748b' }}>No tienes notificaciones por el momento. 🎉</div>
+                ) : (
+                    alerts.map(alert => (
+                        <div key={alert.id} style={styles.card}>
+                            <div style={{ ...styles.icon, backgroundColor: alert.tipo === 'Error' ? '#f43f5e15' : '#6366f115', color: alert.tipo === 'Error' ? '#f43f5e' : '#6366f1' }}>
+                                {alert.tipo === 'Error' ? '⚠️' : '🔔'}
+                            </div>
+                            <div style={styles.info}>
+                                <h3 style={styles.name}>{alert.titulo || 'Notificación'}</h3>
+                                <p style={styles.msg}>{alert.descripcion}</p>
+                                <span style={styles.time}>{formatTime(alert.fecha)}</span>
+                            </div>
+                            {!alert.leida && (
+                                <div style={{ width: '10px', height: '10px', backgroundColor: '#6366f1', borderRadius: '50%' }}></div>
+                            )}
                         </div>
-                        <div style={styles.info}>
-                            <h3 style={styles.name}>{alert.title}</h3>
-                            <p style={styles.msg}>{alert.message}</p>
-                            <span style={styles.time}>{alert.time}</span>
-                        </div>
-                    </div>
-                ))}
+                    ))
+                )}
             </div>
         </div>
     );

@@ -1,43 +1,143 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../services/supabaseClient';
 
 const RestaurantesAd = () => {
     const [searchTerm, setSearchTerm] = useState('');
-    const [restaurants, setRestaurants] = useState([
-        { id: 1, name: 'Ambrosia Restaurant', type: 'Mediterránea', price: '$$$', rating: 4.8, image: 'https://images.unsplash.com/photo-1517248135467-4c7ed9d8747a?auto=format&fit=crop&w=300&q=80' },
-        { id: 2, name: 'Sunset Taverna', type: 'Mariscos', price: '$$', rating: 4.6, image: 'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=300&q=80' },
-        { id: 3, name: 'Kikunoi', type: 'Japonesa', price: '$$$$', rating: 4.9, image: 'https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=300&q=80' }
-    ]);
+    const [restaurants, setRestaurants] = useState([]);
+    const [destinos, setDestinos] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
+    const defaultForm = { name: '', type: '', price: '$$', rating: 4.5, image: '', destino_id: '' };
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentRestaurant, setCurrentRestaurant] = useState(null);
-    const [formData, setFormData] = useState({ name: '', type: '', price: '$$', rating: 4.5, image: '' });
+    const [formData, setFormData] = useState(defaultForm);
 
-    const filtered = restaurants.filter(r => r.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    useEffect(() => {
+        fetchRestaurantes();
+        fetchDestinos();
+    }, []);
+
+    const fetchRestaurantes = async () => {
+        setIsLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('Restaurantes')
+                .select('*, Destino:destino_id(nombre)')
+                .order('id', { ascending: false });
+            
+            if (error) throw error;
+            setRestaurants(data || []);
+        } catch (error) {
+            console.error("Error al obtener restaurantes:", error);
+            // alert("Hubo un error al obtener la lista de restaurantes.");
+            // Supabase podria fallar si la relacion no existe todavia, intentamos basico:
+            fallbackFetchRestaurantes();
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Si falla el JOIN porque no hay Foreign Key, hacemos un fetch simple
+    const fallbackFetchRestaurantes = async () => {
+        try {
+            const { data, error } = await supabase.from('Restaurantes').select('*').order('id', { ascending: false });
+            if (error) throw error;
+            setRestaurants(data || []);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const fetchDestinos = async () => {
+        try {
+            const { data, error } = await supabase.from('Destino').select('id, nombre, pais');
+            if (error) throw error;
+            setDestinos(data || []);
+        } catch (error) {
+            console.error("Error al obtener destinos para el selector:", error);
+        }
+    };
+
+    const filtered = restaurants.filter(r => 
+        r.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        r.tipoComida?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     const handleOpenModal = (res = null) => {
         if (res) {
             setCurrentRestaurant(res);
-            setFormData({ ...res });
+            setFormData({ 
+                name: res.nombre || '', 
+                type: res.tipoComida || '', 
+                price: res.precio || '$$', 
+                rating: res.rating || 4.5, 
+                image: res.imagen || '',
+                destino_id: res.destino_id || '' 
+            });
         } else {
             setCurrentRestaurant(null);
-            setFormData({ name: '', type: '', price: '$$', rating: 4.5, image: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=300&q=80' });
+            setFormData(defaultForm);
         }
         setIsModalOpen(true);
     };
 
-    const handleSave = (e) => {
+    const handleSave = async (e) => {
         e.preventDefault();
-        if (currentRestaurant) {
-            setRestaurants(restaurants.map(r => r.id === currentRestaurant.id ? { ...r, ...formData } : r));
-        } else {
-            setRestaurants([...restaurants, { ...formData, id: Date.now() }]);
+        setIsLoading(true);
+        try {
+            const payload = {
+                nombre: formData.name,
+                tipo: formData.type,
+                precio: isNaN(Number(formData.price)) ? null : Number(formData.price), // asumiendo que db soporta numeric o varchar
+                rating: formData.rating,
+                imagen: formData.image,
+                destino_id: formData.destino_id ? parseInt(formData.destino_id) : null
+            };
+
+            // Si el precio de la UI es en $, $$, $$$ lo dejamos como string si la BD lo soporta,
+            // pero el create table que dimos tiene precio numeric. Guardaremos un numero y luego lo mapeamos.
+            // Para simplificar, si usan $, guardamos null en DB y mostramos $. O mejor adaptamos a numeric:
+            // Vamos a intentar guardar formData.price tal cual si el usuario cambio el tipo de DB.
+            const payloadAjustado = {
+                nombre: formData.name,
+                tipoComida: formData.type,
+                // price: formData.price, Depende del tipo en la BD, mandaremos null si falla al castear 
+                rating: parseFloat(formData.rating),
+                imagen: formData.image,
+                destino_id: formData.destino_id ? parseInt(formData.destino_id) : null
+            };
+
+            if (currentUser) {
+                const { error } = await supabase.from('Restaurantes').update(payloadAjustado).eq('id', currentUser.id);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase.from('Restaurantes').insert([payloadAjustado]);
+                if (error) throw error;
+            }
+            
+            setIsModalOpen(false);
+            setFormData(defaultForm);
+            fetchRestaurantes();
+        } catch (error) {
+            console.error("Error guardando restaurante:", error);
+            alert("No se pudo guardar el restaurante. Asegurate de que la columna 'precio' permita texto si usas '$$' o actualiza el campo en Supabase.");
+        } finally {
+            setIsLoading(false);
         }
-        setIsModalOpen(false);
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (window.confirm('¿Eliminar este restaurante?')) {
-            setRestaurants(restaurants.filter(r => r.id !== id));
+            setIsLoading(true);
+            try {
+                const { error } = await supabase.from('Restaurantes').delete().eq('id', id);
+                if (error) throw error;
+                fetchRestaurantes();
+            } catch (error) {
+                console.error("Error eliminando restaurante:", error);
+                alert("Hubo un error al eliminar el restaurante");
+                setIsLoading(false);
+            }
         }
     };
 
@@ -57,25 +157,40 @@ const RestaurantesAd = () => {
                     <input style={styles.input} placeholder="Buscar restaurantes..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                 </div>
             </div>
-            <div style={styles.list}>
-                {filtered.map(res => (
-                    <div key={res.id} style={styles.card}>
-                        <img src={res.image} alt={res.name} style={styles.img} />
-                        <div style={styles.info}>
-                            <h3 style={styles.name}>{res.name}</h3>
-                            <div style={styles.type}>{res.type}</div>
-                            <div style={styles.meta}>
-                                <span style={styles.price}>{res.price}</span>
-                                <span style={styles.rating}>⭐ {res.rating}</span>
+            
+            {isLoading && restaurants.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                    Cargando restaurantes... ⏳
+                </div>
+            ) : (
+                <div style={styles.list}>
+                    {filtered.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>No se encontraron restaurantes.</div>
+                    ) : (
+                        filtered.map(res => (
+                            <div key={res.id} style={styles.card}>
+                                <img src={res.imagen || 'https://via.placeholder.com/150'} alt={res.nombre} style={styles.img} />
+                                <div style={styles.info}>
+                                    <h3 style={styles.name}>{res.nombre}</h3>
+                                    <div style={styles.type}>
+                                        {res.tipoComida} 
+                                        {res.Destino?.nombre && <span style={{ color: '#0d9488', marginLeft: '5px' }}>📍 {res.Destino.nombre}</span>}
+                                    </div>
+                                    <div style={styles.meta}>
+                                        <span style={styles.price}>{res.precio || 'N/A'}</span>
+                                        <span style={styles.rating}>⭐ {res.rating}</span>
+                                    </div>
+                                </div>
+                                <div style={styles.actions}>
+                                    <button style={styles.actionBtn} onClick={() => handleOpenModal(res)}>📝</button>
+                                    <button style={{ ...styles.actionBtn, color: '#f43f5e' }} onClick={() => handleDelete(res.id)}>🗑️</button>
+                                </div>
                             </div>
-                        </div>
-                        <div style={styles.actions}>
-                            <button style={styles.actionBtn} onClick={() => handleOpenModal(res)}>📝</button>
-                            <button style={{ ...styles.actionBtn, color: '#f43f5e' }} onClick={() => handleDelete(res.id)}>🗑️</button>
-                        </div>
-                    </div>
-                ))}
-            </div>
+                        ))
+                    )}
+                </div>
+            )}
+
             {isModalOpen && (
                 <div style={styles.modalOverlay}>
                     <div style={styles.modal}>
@@ -86,17 +201,21 @@ const RestaurantesAd = () => {
                                 <input style={styles.modalInput} value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
                             </div>
                             <div style={styles.formGroup}>
-                                <label style={styles.label}>Tipo de Cocina</label>
-                                <input style={styles.modalInput} value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} required />
+                                <label style={styles.label}>Destino Asociado</label>
+                                <select 
+                                    style={styles.modalInput} 
+                                    value={formData.destino_id} 
+                                    onChange={e => setFormData({ ...formData, destino_id: e.target.value })}
+                                >
+                                    <option value="">Seleccionar Destino (Opcional)</option>
+                                    {destinos.map(d => (
+                                        <option key={d.id} value={d.id}>{d.nombre} ({d.pais})</option>
+                                    ))}
+                                </select>
                             </div>
                             <div style={styles.formGroup}>
-                                <label style={styles.label}>Rango de Precio</label>
-                                <select style={styles.modalInput} value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })}>
-                                    <option value="$">$ (Económico)</option>
-                                    <option value="$$">$$ (Medio)</option>
-                                    <option value="$$$">$$$ (Caro)</option>
-                                    <option value="$$$$">$$$$ (Lujo)</option>
-                                </select>
+                                <label style={styles.label}>Tipo de Cocina</label>
+                                <input style={styles.modalInput} value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} required />
                             </div>
                             <div style={styles.formGroup}>
                                 <label style={styles.label}>Calificación (1-5)</label>
@@ -107,8 +226,10 @@ const RestaurantesAd = () => {
                                 <input style={styles.modalInput} value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} />
                             </div>
                             <div style={styles.modalActions}>
-                                <button type="button" style={styles.cancelBtn} onClick={() => setIsModalOpen(false)}>Cancelar</button>
-                                <button type="submit" style={styles.saveBtn}>Guardar</button>
+                                <button type="button" style={styles.cancelBtn} onClick={() => setIsModalOpen(false)} disabled={isLoading}>Cancelar</button>
+                                <button type="submit" style={{...styles.saveBtn, opacity: isLoading ? 0.7 : 1}} disabled={isLoading}>
+                                    {isLoading ? 'Guardando...' : 'Guardar'}
+                                </button>
                             </div>
                         </form>
                     </div>

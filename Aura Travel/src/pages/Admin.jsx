@@ -1,28 +1,69 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../services/supabaseClient';
 
 const Admin = () => {
-    const stats = [
-        { title: 'Usuarios activos', value: '234', change: '+12%', icon: '👤', color: '#6366f1' },
-        { title: 'Destinos totales', value: '6', change: '+3', icon: '📍', color: '#2dd4bf' },
-        { title: 'Reservas este mes', value: '1', change: '+8%', icon: '📅', color: '#a78bfa' },
-        { title: 'Vistas totales', value: '1520', change: '+24%', icon: '👁️', color: '#f43f5e' }
-    ];
+    const [stats, setStats] = useState([
+        { title: 'Usuarios activos', value: '...', change: 'Real-time', icon: '👤', color: '#6366f1' },
+        { title: 'Destinos totales', value: '...', change: 'Real-time', icon: '📍', color: '#2dd4bf' },
+        { title: 'Reservas totales', value: '...', change: 'Real-time', icon: '📅', color: '#a78bfa' },
+        { title: 'Actividades', value: '...', change: 'Real-time', icon: '🎟️', color: '#f43f5e' }
+    ]);
 
-    const popularDestinations = [
-        { name: 'Santorini', country: 'Grecia', rating: 4.9, rank: 1 },
-        { name: 'Machu Picchu', country: 'Perú', rating: 4.9, rank: 2 },
-        { name: 'Islandia', country: 'Islandia', rating: 4.9, rank: 3 },
-        { name: 'Kyoto', country: 'Japón', rating: 4.8, rank: 4 },
-        { name: 'Bali', country: 'Indonesia', rating: 4.8, rank: 5 }
-    ];
+    const [popularDestinations, setPopularDestinations] = useState([]);
+    const [recentAlerts, setRecentAlerts] = useState([]);
 
-    const activities = [
-        { user: 'Ana García', action: 'creó una reserva', target: 'Santorini', time: 'Hace 5 min', color: '#6366f1' },
-        { user: 'Carlos López', action: 'modificó el destino', target: 'Kyoto', time: 'Hace 12 min', color: '#a78bfa' },
-        { user: 'María Torres', action: 'añadió un restaurante', target: 'París', time: 'Hace 1 hora', color: '#2dd4bf' }
-    ];
+    const chartBars = [45, 52, 48, 61, 70, 86]; // Gráfica estática de ejemplo por ahora
 
-    const chartBars = [45, 52, 48, 61, 70, 86];
+    useEffect(() => {
+        fetchDashboardData();
+    }, []);
+
+    const fetchDashboardData = async () => {
+        try {
+            // 1. Obtener conteos usando { count: 'exact', head: true } para mayor rendimiento
+            const { count: countUsuarios } = await supabase.from('Usuarios').select('*', { count: 'exact', head: true });
+            const { count: countDestinos } = await supabase.from('Destino').select('*', { count: 'exact', head: true });
+            const { count: countReservas } = await supabase.from('Reservas').select('*', { count: 'exact', head: true });
+            const { count: countActividades } = await supabase.from('Actividades').select('*', { count: 'exact', head: true });
+
+            setStats([
+                { title: 'Usuarios registrados', value: countUsuarios || 0, change: 'Real-time', icon: '👤', color: '#6366f1' },
+                { title: 'Destinos totales', value: countDestinos || 0, change: 'Real-time', icon: '📍', color: '#2dd4bf' },
+                { title: 'Reservas totales', value: countReservas || 0, change: 'Real-time', icon: '📅', color: '#a78bfa' },
+                { title: 'Actividades publicadas', value: countActividades || 0, change: 'Real-time', icon: '🎟️', color: '#f43f5e' }
+            ]);
+
+            // 2. Obtener Destinos más populares (Top 5 por rating)
+            const { data: topDestinos } = await supabase
+                .from('Destino')
+                .select('nombre, pais, rating')
+                .order('rating', { ascending: false })
+                .limit(5);
+
+            if (topDestinos) {
+                setPopularDestinations(topDestinos.map((d, i) => ({
+                    name: d.nombre,
+                    country: d.pais,
+                    rating: d.rating || 0,
+                    rank: i + 1
+                })));
+            }
+
+            // 3. Obtener alertas recientes (como una vista de actividad)
+            const { data: alertas } = await supabase
+                .from('Alertas')
+                .select('*')
+                .order('fecha', { ascending: false })
+                .limit(4);
+            
+            if (alertas) {
+                setRecentAlerts(alertas);
+            }
+
+        } catch (error) {
+            console.error("Error al cargar datos del Dashboard:", error);
+        }
+    };
 
     return (
         <div style={styles.dashboardWrapper}>
@@ -38,10 +79,10 @@ const Admin = () => {
             <header style={styles.header}>
                 <div>
                     <h2 style={styles.title}>Dashboard</h2>
-                    <p style={styles.subtitle}>Resumen Aura Travel</p>
+                    <p style={styles.subtitle}>Resumen en tiempo real de Aura Travel</p>
                 </div>
                 <div style={styles.userProfile}>
-                    <div style={styles.avatar}>R</div>
+                    <div style={styles.avatar}>A</div>
                     <span style={{ fontWeight: '600', color: '#0f172a' }}>Administrador</span>
                 </div>
             </header>
@@ -68,7 +109,7 @@ const Admin = () => {
             <div style={styles.middleGrid}>
                 <div className="card" style={styles.chartContainer}>
                     <div style={styles.sectionHeader}>
-                        <span style={{ color: '#6366f1' }}>📈</span> Tendencias de reservas
+                        <span style={{ color: '#6366f1' }}>📈</span> Tendencias de uso
                     </div>
                     <div style={styles.chartArea}>
                         <div style={styles.yAxis}>
@@ -90,43 +131,57 @@ const Admin = () => {
 
                 <div className="card" style={styles.rankingContainer}>
                     <div style={styles.sectionHeader}>
-                        <span style={{ color: '#2dd4bf' }}>⭐</span> Destinos más populares
+                        <span style={{ color: '#2dd4bf' }}>⭐</span> Destinos más valorados
                     </div>
-                    <div style={styles.rankList}>
-                        {popularDestinations.map((dest, i) => (
-                            <div key={i} style={styles.rankItem}>
-                                <div style={styles.rankNumber}>{dest.rank}</div>
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: '700', color: '#0f172a' }}>{dest.name}</div>
-                                    <div style={{ fontSize: '12px', color: '#94a3b8' }}>{dest.country}</div>
+                    {popularDestinations.length === 0 ? (
+                        <div style={{ padding: '20px', color: '#94a3b8', textAlign: 'center' }}>Cargando destinos...</div>
+                    ) : (
+                        <div style={styles.rankList}>
+                            {popularDestinations.map((dest, i) => (
+                                <div key={i} style={styles.rankItem}>
+                                    <div style={styles.rankNumber}>{dest.rank}</div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontWeight: '700', color: '#0f172a' }}>{dest.name}</div>
+                                        <div style={{ fontSize: '12px', color: '#94a3b8' }}>{dest.country}</div>
+                                    </div>
+                                    <div style={styles.ratingBox}>
+                                        <span style={{ color: '#fbbf24' }}>★</span>
+                                        <span style={{ fontWeight: '700' }}>{dest.rating}</span>
+                                    </div>
                                 </div>
-                                <div style={styles.ratingBox}>
-                                    <span style={{ color: '#fbbf24' }}>★</span>
-                                    <span style={{ fontWeight: '700' }}>{dest.rating}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 
-
             <div className="card" style={styles.activityContainer}>
-                <h3 style={{ ...styles.sectionHeader, marginBottom: '20px' }}>Actividad reciente</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={styles.sectionHeader}>Últimas Alertas del Sistema</h3>
+                </div>
                 <div style={styles.activityList}>
-                    {activities.map((act, i) => (
-                        <div key={i} style={styles.activityItem}>
-                            <div style={{ ...styles.activityAvatar, backgroundColor: act.color }}>
-                                {act.user.charAt(0)}
-                            </div>
-                            <div style={{ flex: 1 }}>
-                                <span style={{ fontWeight: '700', color: '#0f172a' }}>{act.user}</span>
-                                <span style={{ color: '#64748b', margin: '0 5px' }}>{act.action}</span>
-                                <span style={{ fontWeight: '600', color: '#6366f1' }}>{act.target}</span>
-                                <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>{act.time}</div>
-                            </div>
-                        </div>
-                    ))}
+                    {recentAlerts.length === 0 ? (
+                        <div style={{ color: '#94a3b8', textAlign: 'center', padding: '10px' }}>Sin alertas recientes</div>
+                    ) : (
+                        recentAlerts.map((act, i) => {
+                            const date = new Date(act.fecha);
+                            return (
+                                <div key={act.id} style={styles.activityItem}>
+                                    <div style={{ ...styles.activityAvatar, backgroundColor: act.tipo === 'Error' ? '#f43f5e' : '#6366f1' }}>
+                                        {act.tipo === 'Error' ? '!' : 'i'}
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <span style={{ fontWeight: '700', color: '#0f172a' }}>{act.titulo || 'Alerta'}</span>
+                                        <span style={{ color: '#64748b', margin: '0 5px' }}>-</span>
+                                        <span style={{ color: '#64748b' }}>{act.descripcion}</span>
+                                        <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                                            {date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit'})}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
             </div>
         </div>
@@ -201,7 +256,7 @@ const styles = {
         display: 'flex',
         flexDirection: 'column'
     },
-    sectionHeader: { fontSize: '18px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '10px' },
+    sectionHeader: { fontSize: '18px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 },
     chartArea: { flex: 1, display: 'flex', marginTop: '30px', position: 'relative' },
     yAxis: {
         display: 'flex',
@@ -241,7 +296,8 @@ const styles = {
         background: '#fff',
         padding: '30px',
         borderRadius: '24px',
-        height: '400px'
+        height: '400px',
+        overflowY: 'auto'
     },
     rankList: { marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '16px' },
     rankItem: {
@@ -287,7 +343,8 @@ const styles = {
         alignItems: 'center',
         justifyContent: 'center',
         color: 'white',
-        fontWeight: '800'
+        fontWeight: '800',
+        fontSize: '20px'
     }
 };
 

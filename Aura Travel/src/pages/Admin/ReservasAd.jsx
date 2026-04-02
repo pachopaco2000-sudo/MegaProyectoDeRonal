@@ -1,50 +1,107 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../services/supabaseClient';
 
 const ReservasAd = () => {
     const [searchTerm, setSearchTerm] = useState('');
-    const [reservations, setReservations] = useState([
-        { id: 'book1', target: 'Santorini', location: 'Grecia', date: '2025-06-15', duration: '2025-06-20', people: 2, status: 'Confirmada', created: '10/2/2025', image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=300&q=80' }
-    ]);
+    const [reservations, setReservations] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
+    const defaultForm = { target: '', location: '', date: '', duration: '', people: 1, status: 'Pendiente', image: '' };
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentBooking, setCurrentBooking] = useState(null);
-    const [formData, setFormData] = useState({ target: '', location: '', date: '', duration: '', people: 1, status: 'Pendiente' });
+    const [formData, setFormData] = useState(defaultForm);
+
+    useEffect(() => {
+        fetchReservas();
+    }, []);
+
+    const fetchReservas = async () => {
+        setIsLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('Reservas')
+                .select('*')
+                .order('id', { ascending: false });
+            
+            if (error) throw error;
+            setReservations(data || []);
+        } catch (error) {
+            console.error("Error al obtener reservas:", error);
+            alert("Hubo un error al cargar las reservas.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const filtered = reservations.filter(r =>
-        r.target.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.id.toLowerCase().includes(searchTerm.toLowerCase())
+        r.target?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        r.id?.toString().includes(searchTerm)
     );
 
     const handleOpenModal = (res = null) => {
         if (res) {
             setCurrentBooking(res);
-            setFormData({ ...res });
+            setFormData({ 
+                target: res.target || '', 
+                location: res.location || '', 
+                date: res.fechaInicio || '', 
+                duration: res.fechaFin || '', 
+                people: res.people || 1, 
+                status: res.estado || 'Pendiente',
+                image: res.image || ''
+            });
         } else {
             setCurrentBooking(null);
-            setFormData({ target: '', location: '', date: '', duration: '', people: 1, status: 'Pendiente' });
+            setFormData(defaultForm);
         }
         setIsModalOpen(true);
     };
 
-    const handleSave = (e) => {
+    const handleSave = async (e) => {
         e.preventDefault();
-        if (currentBooking) {
-            setReservations(reservations.map(r => r.id === currentBooking.id ? { ...r, ...formData } : r));
-        } else {
-            const newRes = {
-                ...formData,
-                id: 'book' + Date.now(),
-                created: new Date().toLocaleDateString(),
-                image: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=300&q=80'
+        setIsLoading(true);
+        try {
+            const payload = {
+                target: formData.target,
+                location: formData.location,
+                fechaInicio: formData.date || null,
+                fechaFin: formData.duration || null,
+                people: parseInt(formData.people) || 1,
+                estado: formData.status,
+                image: formData.image
             };
-            setReservations([...reservations, newRes]);
+
+            if (currentBooking) {
+                const { error } = await supabase.from('Reservas').update(payload).eq('id', currentBooking.id);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase.from('Reservas').insert([payload]);
+                if (error) throw error;
+            }
+            
+            setIsModalOpen(false);
+            setFormData(defaultForm);
+            fetchReservas();
+        } catch (error) {
+            console.error("Error guardando reserva:", error);
+            alert("No se pudo guardar la reserva. Verifica que las columnas existan en la base de datos.");
+        } finally {
+            setIsLoading(false);
         }
-        setIsModalOpen(false);
     };
 
-    const handleDelete = (id) => {
-        if (window.confirm('¿Eliminar esta reserva?')) {
-            setReservations(reservations.filter(r => r.id !== id));
+    const handleDelete = async (id) => {
+        if (window.confirm('¿Eliminar esta reserva permanentemente?')) {
+            setIsLoading(true);
+            try {
+                const { error } = await supabase.from('Reservas').delete().eq('id', id);
+                if (error) throw error;
+                fetchReservas();
+            } catch (error) {
+                console.error("Error eliminando reserva:", error);
+                alert("Hubo un error al eliminar.");
+                setIsLoading(false);
+            }
         }
     };
 
@@ -65,28 +122,38 @@ const ReservasAd = () => {
                 </div>
             </div>
 
-            <div style={styles.list}>
-                {filtered.map(res => (
-                    <div key={res.id} style={styles.card}>
-                        <img src={res.image} alt={res.target} style={styles.img} />
-                        <div style={styles.info}>
-                            <h3 style={styles.name}>{res.target}</h3>
-                            <div style={styles.loc}>📍 {res.location}</div>
-                            <div style={styles.meta}>
-                                📅 {res.date} a {res.duration} • 👥 {res.people} personas
+            {isLoading && reservations.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                    Cargando reservas... ⏳
+                </div>
+            ) : (
+                <div style={styles.list}>
+                    {filtered.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>No se encontraron reservas.</div>
+                    ) : (
+                        filtered.map(res => (
+                            <div key={res.id} style={styles.card}>
+                                <img src={res.image || 'https://via.placeholder.com/150'} alt={res.target} style={styles.img} />
+                                <div style={styles.info}>
+                                    <h3 style={styles.name}>{res.target}</h3>
+                                    <div style={styles.loc}>📍 {res.location}</div>
+                                    <div style={styles.meta}>
+                                        📅 {res.fechaInicio} a {res.fechaFin} • 👥 {res.people} personas
+                                    </div>
+                                    <div style={styles.id}>ID: #{res.id}</div>
+                                </div>
+                                <div style={{ ...styles.badge, backgroundColor: res.estado === 'Confirmada' ? '#2dd4bf22' : (res.estado === 'Cancelada' ? '#f43f5e22' : '#fbbf2422'), color: res.estado === 'Confirmada' ? '#0d9488' : (res.estado === 'Cancelada' ? '#e11d48' : '#b45309') }}>
+                                    {res.estado || 'Pendiente'}
+                                </div>
+                                <div style={styles.actions}>
+                                    <button style={styles.actionBtn} onClick={() => handleOpenModal(res)}>📝</button>
+                                    <button style={{ ...styles.actionBtn, color: '#f43f5e' }} onClick={() => handleDelete(res.id)}>🗑️</button>
+                                </div>
                             </div>
-                            <div style={styles.id}>ID: {res.id} • Creada: {res.created}</div>
-                        </div>
-                        <div style={{ ...styles.badge, backgroundColor: res.status === 'Confirmada' ? '#2dd4bf22' : '#fbbf2422', color: res.status === 'Confirmada' ? '#0d9488' : '#b45309' }}>
-                            {res.status}
-                        </div>
-                        <div style={styles.actions}>
-                            <button style={styles.actionBtn} onClick={() => handleOpenModal(res)}>📝</button>
-                            <button style={{ ...styles.actionBtn, color: '#f43f5e' }} onClick={() => handleDelete(res.id)}>🗑️</button>
-                        </div>
-                    </div>
-                ))}
-            </div>
+                        ))
+                    )}
+                </div>
+            )}
 
             {isModalOpen && (
                 <div style={styles.modalOverlay}>
@@ -94,7 +161,7 @@ const ReservasAd = () => {
                         <h3 style={styles.modalTitle}>{currentBooking ? 'Editar Reserva' : 'Nueva Reserva'}</h3>
                         <form onSubmit={handleSave}>
                             <div style={styles.formGroup}>
-                                <label style={styles.label}>Destino</label>
+                                <label style={styles.label}>Destino / Título</label>
                                 <input style={styles.modalInput} value={formData.target} onChange={e => setFormData({ ...formData, target: e.target.value })} required />
                             </div>
                             <div style={styles.formGroup}>
@@ -125,9 +192,15 @@ const ReservasAd = () => {
                                     </select>
                                 </div>
                             </div>
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>URL Imagen</label>
+                                <input style={styles.modalInput} value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} />
+                            </div>
                             <div style={styles.modalActions}>
-                                <button type="button" style={styles.cancelBtn} onClick={() => setIsModalOpen(false)}>Cancelar</button>
-                                <button type="submit" style={styles.saveBtn}>Guardar</button>
+                                <button type="button" style={styles.cancelBtn} onClick={() => setIsModalOpen(false)} disabled={isLoading}>Cancelar</button>
+                                <button type="submit" style={{...styles.saveBtn, opacity: isLoading ? 0.7 : 1}} disabled={isLoading}>
+                                    {isLoading ? 'Guardando...' : 'Guardar'}
+                                </button>
                             </div>
                         </form>
                     </div>

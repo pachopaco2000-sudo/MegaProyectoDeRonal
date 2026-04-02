@@ -1,46 +1,126 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../services/supabaseClient';
 
 const ActividadesAd = () => {
     const [searchTerm, setSearchTerm] = useState('');
-    const [activities, setActivities] = useState([
-        { id: 1, name: 'Tour en Catamarán', type: 'Aventura', price: 120, duration: '4h', location: 'Santorini', status: 'Activo', image: 'https://images.unsplash.com/photo-1544551763-47a0159c9638?auto=format&fit=crop&w=300&q=80' },
-        { id: 2, name: 'Clase de Cocina Griega', type: 'Cultural', price: 85, duration: '3h', location: 'Mykonos', status: 'Activo', image: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=300&q=80' },
-        { id: 3, name: 'Senderismo Volcánico', type: 'Naturaleza', price: 45, duration: '6h', location: 'Santorini', status: 'Inactivo', image: 'https://images.unsplash.com/photo-1544084801-16ef237636e0?auto=format&fit=crop&w=300&q=80' }
-    ]);
+    const [activities, setActivities] = useState([]);
+    const [destinos, setDestinos] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
+    const defaultForm = { name: '', type: 'Aventura', price: '', duration: '', destino_id: '', image: '' };
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentActivity, setCurrentActivity] = useState(null);
-    const [formData, setFormData] = useState({ name: '', type: 'Aventura', price: '', duration: '', location: '', status: 'Activo', image: '' });
+    const [formData, setFormData] = useState(defaultForm);
+
+    useEffect(() => {
+        fetchActividades();
+        fetchDestinos();
+    }, []);
+
+    const fetchActividades = async () => {
+        setIsLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('Actividades')
+                .select('*, Destino:destino_id(nombre)')
+                .order('id', { ascending: false });
+            
+            if (error) throw error;
+            setActivities(data || []);
+        } catch (error) {
+            console.error("Error al obtener actividades:", error);
+            fallbackFetchActividades();
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const fallbackFetchActividades = async () => {
+        try {
+            const { data, error } = await supabase.from('Actividades').select('*').order('id', { ascending: false });
+            if (error) throw error;
+            setActivities(data || []);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const fetchDestinos = async () => {
+        try {
+            const { data, error } = await supabase.from('Destino').select('id, nombre, pais');
+            if (error) throw error;
+            setDestinos(data || []);
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
     const filtered = activities.filter(a =>
-        a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        a.location.toLowerCase().includes(searchTerm.toLowerCase())
+        a.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        a.Destino?.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const handleOpenModal = (activity = null) => {
         if (activity) {
             setCurrentActivity(activity);
-            setFormData({ ...activity });
+            setFormData({ 
+                name: activity.nombre || '', 
+                type: activity.tipo || 'Aventura', 
+                price: activity.precio || '', 
+                duration: activity.duracion || '', 
+                destino_id: activity.destino_id || '', 
+                image: activity.imagen || '' 
+            });
         } else {
             setCurrentActivity(null);
-            setFormData({ name: '', type: 'Aventura', price: '', duration: '', location: '', status: 'Activo', image: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=300&q=80' });
+            setFormData(defaultForm);
         }
         setIsModalOpen(true);
     };
 
-    const handleSave = (e) => {
+    const handleSave = async (e) => {
         e.preventDefault();
-        if (currentActivity) {
-            setActivities(activities.map(a => a.id === currentActivity.id ? { ...a, ...formData } : a));
-        } else {
-            setActivities([...activities, { ...formData, id: Date.now() }]);
+        setIsLoading(true);
+        try {
+            const payload = {
+                nombre: formData.name,
+                tipo: formData.type,
+                precio: Number(formData.price),
+                duracion: formData.duration,
+                imagen: formData.image,
+                destino_id: formData.destino_id ? parseInt(formData.destino_id) : null
+            };
+
+            if (currentActivity) {
+                const { error } = await supabase.from('Actividades').update(payload).eq('id', currentActivity.id);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase.from('Actividades').insert([payload]);
+                if (error) throw error;
+            }
+            setIsModalOpen(false);
+            setFormData(defaultForm);
+            fetchActividades();
+        } catch (error) {
+            console.error("Error guardando actividad:", error);
+            alert("Hubo un error al guardar la actividad.");
+        } finally {
+            setIsLoading(false);
         }
-        setIsModalOpen(false);
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (window.confirm('¿Deseas eliminar esta actividad?')) {
-            setActivities(activities.filter(a => a.id !== id));
+            setIsLoading(true);
+            try {
+                const { error } = await supabase.from('Actividades').delete().eq('id', id);
+                if (error) throw error;
+                fetchActividades();
+            } catch (error) {
+                console.error("Error eliminando actividad:", error);
+                alert("Hubo un error al eliminar.");
+                setIsLoading(false);
+            }
         }
     };
 
@@ -59,37 +139,46 @@ const ActividadesAd = () => {
                     <span>🔍</span>
                     <input
                         style={styles.input}
-                        placeholder="Buscar por nombre o ubicación..."
+                        placeholder="Buscar por nombre de actividad o destino..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                     />
                 </div>
             </div>
 
-            <div style={styles.list}>
-                {filtered.map(act => (
-                    <div key={act.id} style={styles.card}>
-                        <img src={act.image} alt={act.name} style={styles.img} />
-                        <div style={styles.info}>
-                            <div style={styles.nameRow}>
-                                <h3 style={styles.name}>{act.name}</h3>
-                                <span style={{ ...styles.badge, backgroundColor: act.status === 'Activo' ? '#2dd4bf22' : '#f43f5e22', color: act.status === 'Activo' ? '#0d9488' : '#e11d48' }}>
-                                    {act.status}
-                                </span>
+            {isLoading && activities.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                    Cargando actividades... ⏳
+                </div>
+            ) : (
+                <div style={styles.list}>
+                    {filtered.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>No se encontraron actividades.</div>
+                    ) : (
+                        filtered.map(act => (
+                            <div key={act.id} style={styles.card}>
+                                <img src={act.imagen || 'https://via.placeholder.com/150'} alt={act.nombre} style={styles.img} />
+                                <div style={styles.info}>
+                                    <div style={styles.nameRow}>
+                                        <h3 style={styles.name}>{act.nombre}</h3>
+                                    </div>
+                                    <div style={styles.loc}>
+                                        {act.Destino?.nombre ? `📍 ${act.Destino.nombre}` : '📍 Sin destino'} • ⏱️ {act.duracion || 'N/A'}
+                                    </div>
+                                    <div style={styles.meta}>
+                                        <span style={styles.type}>{act.tipo}</span>
+                                        <span style={styles.price}>€{act.precio}</span>
+                                    </div>
+                                </div>
+                                <div style={styles.actions}>
+                                    <button style={styles.actionBtn} onClick={() => handleOpenModal(act)}>📝</button>
+                                    <button style={{ ...styles.actionBtn, color: '#f43f5e' }} onClick={() => handleDelete(act.id)}>🗑️</button>
+                                </div>
                             </div>
-                            <div style={styles.loc}>📍 {act.location} • ⏱️ {act.duration}</div>
-                            <div style={styles.meta}>
-                                <span style={styles.type}>{act.type}</span>
-                                <span style={styles.price}>€{act.price}</span>
-                            </div>
-                        </div>
-                        <div style={styles.actions}>
-                            <button style={styles.actionBtn} onClick={() => handleOpenModal(act)}>📝</button>
-                            <button style={{ ...styles.actionBtn, color: '#f43f5e' }} onClick={() => handleDelete(act.id)}>🗑️</button>
-                        </div>
-                    </div>
-                ))}
-            </div>
+                        ))
+                    )}
+                </div>
+            )}
 
             {isModalOpen && (
                 <div style={styles.modalOverlay}>
@@ -118,8 +207,18 @@ const ActividadesAd = () => {
                             </div>
                             <div style={styles.formGrid}>
                                 <div style={styles.formGroup}>
-                                    <label style={styles.label}>Ubicación</label>
-                                    <input style={styles.modalInput} value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} required />
+                                    <label style={styles.label}>Destino</label>
+                                    <select 
+                                        style={styles.modalInput} 
+                                        value={formData.destino_id} 
+                                        onChange={e => setFormData({ ...formData, destino_id: e.target.value })}
+                                        required
+                                    >
+                                        <option value="">Seleccionar...</option>
+                                        {destinos.map(d => (
+                                            <option key={d.id} value={d.id}>{d.nombre} ({d.pais})</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div style={styles.formGroup}>
                                     <label style={styles.label}>Duración (ej: 4h)</label>
@@ -130,16 +229,11 @@ const ActividadesAd = () => {
                                 <label style={styles.label}>URL Imagen</label>
                                 <input style={styles.modalInput} value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} />
                             </div>
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>Estado</label>
-                                <select style={styles.modalInput} value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
-                                    <option value="Activo">Activo</option>
-                                    <option value="Inactivo">Inactivo</option>
-                                </select>
-                            </div>
                             <div style={styles.modalActions}>
-                                <button type="button" style={styles.cancelBtn} onClick={() => setIsModalOpen(false)}>Cancelar</button>
-                                <button type="submit" style={styles.saveBtn}>Guardar</button>
+                                <button type="button" style={styles.cancelBtn} onClick={() => setIsModalOpen(false)} disabled={isLoading}>Cancelar</button>
+                                <button type="submit" style={{...styles.saveBtn, opacity: isLoading ? 0.7 : 1}} disabled={isLoading}>
+                                    {isLoading ? 'Guardando...' : 'Guardar'}
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -173,7 +267,6 @@ const styles = {
     info: { flex: 1 },
     nameRow: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' },
     name: { margin: 0, fontSize: '18px', fontWeight: '700' },
-    badge: { padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: '700' },
     loc: { fontSize: '14px', color: '#64748b', marginBottom: '8px' },
     meta: { display: 'flex', gap: '12px', alignItems: 'center' },
     type: { backgroundColor: '#f1f5f9', padding: '4px 10px', borderRadius: '8px', fontSize: '12px', color: '#475569', fontWeight: '600' },
