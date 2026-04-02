@@ -1,0 +1,26 @@
+.actividades-container { padding: 30px 20px; background-color: #f8fafc; min-height: 100vh; padding-bottom: 100px; }
+.actividades-header { margin-bottom: 30px; text-align: center; }
+.actividades-title { font-size: 32px; font-weight: 800; color: #1e293b; margin: 0 0 10px 0; }
+.actividades-subtitle { color: #64748b; font-size: 16px; margin: 0; }
+.actividades-filter-section { margin-bottom: 30px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.actividades-filter-row { display: flex; gap: 12px; padding: 5px; }
+.actividades-filter-btn { padding: 10px 20px; border-radius: 14px; border: none; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.3s ease; }
+.actividades-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; }
+.actividades-card { background-color: #fff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+.actividades-img-container { position: relative; height: 220px; }
+.actividades-img { width: 100%; height: 100%; object-fit: cover; }
+.actividades-category-badge { position: absolute; top: 15px; left: 15px; background-color: rgba(99, 102, 241, 0.9); color: #fff; padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; }
+.actividades-price-badge { position: absolute; bottom: 15px; right: 15px; background-color: #fff; padding: 6px 12px; border-radius: 10px; font-size: 14px; font-weight: 800; color: #1e293b; }
+.actividades-card-content { padding: 20px; }
+.actividades-meta-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+.actividades-location { font-size: 13px; color: #64748b; font-weight: 600; }
+.actividades-rating { font-size: 14px; font-weight: 700; color: #facc15; }
+.actividades-act-name { font-size: 18px; font-weight: 800; color: #1e293b; margin: 0 0 15px 0; line-height: 1.4; }
+.actividades-footer-row { display: flex; justify-content: space-between; align-items: center; }
+.actividades-duration { font-size: 13px; color: #94a3b8; font-weight: 600; }
+.actividades-book-btn { background-color: #6366f1; color: #fff; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 13px; }
+
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.anim-fade { animation: slideUp 0.5s ease-out forwards; }
+.hover-scale { transition: transform 0.3s ease; }
+.hover-scale:hover { transform: scale(1.02); }

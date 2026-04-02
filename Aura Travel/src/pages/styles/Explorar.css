@@ -1,0 +1,23 @@
+.explorar-page { padding: 20px; padding-bottom: 100px; background-color: #f8fafc; min-height: 100vh; }
+.explorar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+.explorar-title { font-size: 28px; font-weight: 800; margin: 0; }
+.explorar-filter-toggle { padding: 10px 18px; border-radius: 14px; border: none; font-weight: 700; cursor: pointer; font-size: 13px; }
+.explorar-advanced-filters { background-color: #fff; border-radius: 24px; padding: 20px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+.explorar-filter-group { margin-bottom: 20px; }
+.explorar-group-label { display: block; font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 12px; }
+.explorar-range-input { width: 100%; accent-color: #6366f1; }
+.explorar-chip-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.explorar-chip { padding: 6px 14px; border-radius: 10px; border: 1px solid #e2e8f0; cursor: pointer; font-size: 12px; font-weight: 600; }
+.explorar-category-row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 15px; }
+.explorar-cat-btn { padding: 10px 20px; border-radius: 20px; cursor: pointer; white-space: nowrap; font-weight: 700; font-size: 14px; }
+.explorar-results-count { color: #64748b; margin: 15px 0; font-size: 14px; font-weight: 600; }
+.explorar-grid { display: flex; flex-direction: column; gap: 20px; }
+.explorar-card { background-color: #fff; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: relative; }
+.explorar-img-badge { position: absolute; top: 15px; right: 15px; background-color: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 10px; font-size: 12px; font-weight: 800; z-index: 1; }
+.explorar-card-img { width: 100%; height: 180px; object-fit: cover; }
+.explorar-card-info { padding: 20px; }
+.explorar-tag-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+.explorar-tag { padding: 4px 12px; background: #f1f5f9; color: #475569; border-radius: 10px; font-size: 11px; font-weight: 700; }
+
+@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+.anim-slide-down { animation: slideDown 0.3s ease-out forwards; }

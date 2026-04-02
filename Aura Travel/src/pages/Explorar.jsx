@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './styles/Explorar.css';
 
 const Explorar = () => {
     const [showFilters, setShowFilters] = useState(false);
@@ -39,37 +40,39 @@ const Explorar = () => {
     });
 
     return (
-        <div style={styles.page} className="anim-fade">
-            <header style={styles.header}>
-                <h1 style={styles.title}>Explorar</h1>
+        <div className="explorar-page anim-fade">
+            <header className="explorar-header">
+                <h1 className="explorar-title">Explorar</h1>
                 <button
                     onClick={() => setShowFilters(!showFilters)}
-                    style={{ ...styles.filterToggle, backgroundColor: showFilters ? '#6366f1' : '#f1f5f9', color: showFilters ? '#fff' : '#64748b' }}
+                    className="explorar-filter-toggle"
+                    style={{ backgroundColor: showFilters ? '#6366f1' : '#f1f5f9', color: showFilters ? '#fff' : '#64748b' }}
                 >
                     {showFilters ? '✕ Cerrar' : '🔍 Filtros avanzados'}
                 </button>
             </header>
 
             {showFilters && (
-                <div style={styles.advancedFilters} className="anim-slide-down">
-                    <div style={styles.filterGroup}>
-                        <label style={styles.groupLabel}>Presupuesto Máximo: €{budget}</label>
+                <div className="explorar-advanced-filters anim-slide-down">
+                    <div className="explorar-filter-group">
+                        <label className="explorar-group-label">Presupuesto Máximo: €{budget}</label>
                         <input
                             type="range" min="300" max="3000" step="50"
-                            style={styles.rangeInput}
+                            className="explorar-range-input"
                             value={budget}
                             onChange={(e) => setBudget(e.target.value)}
                         />
                     </div>
 
-                    <div style={styles.filterGroup}>
-                        <label style={styles.groupLabel}>Intereses</label>
-                        <div style={styles.chipGrid}>
+                    <div className="explorar-filter-group">
+                        <label className="explorar-group-label">Intereses</label>
+                        <div className="explorar-chip-grid">
                             {interests.map(i => (
                                 <button
                                     key={i}
                                     onClick={() => toggleInterest(i)}
-                                    style={{ ...styles.chip, backgroundColor: selectedInterests.includes(i) ? '#6366f1' : '#fff', color: selectedInterests.includes(i) ? '#fff' : '#64748b' }}
+                                    className="explorar-chip"
+                                    style={{ backgroundColor: selectedInterests.includes(i) ? '#6366f1' : '#fff', color: selectedInterests.includes(i) ? '#fff' : '#64748b' }}
                                 >
                                     {i}
                                 </button>
@@ -77,14 +80,15 @@ const Explorar = () => {
                         </div>
                     </div>
 
-                    <div style={styles.filterGroup}>
-                        <label style={styles.groupLabel}>Idiomas sugeridos</label>
-                        <div style={styles.chipGrid}>
+                    <div className="explorar-filter-group">
+                        <label className="explorar-group-label">Idiomas sugeridos</label>
+                        <div className="explorar-chip-grid">
                             {languages.map(l => (
                                 <button
                                     key={l}
                                     onClick={() => toggleLanguage(l)}
-                                    style={{ ...styles.chip, backgroundColor: selectedLanguages.includes(l) ? '#6366f1' : '#fff', color: selectedLanguages.includes(l) ? '#fff' : '#64748b' }}
+                                    className="explorar-chip"
+                                    style={{ backgroundColor: selectedLanguages.includes(l) ? '#6366f1' : '#fff', color: selectedLanguages.includes(l) ? '#fff' : '#64748b' }}
                                 >
                                     {l}
                                 </button>
@@ -94,33 +98,34 @@ const Explorar = () => {
                 </div>
             )}
 
-            <div style={styles.categoryRow}>
+            <div className="explorar-category-row">
                 {categorias.map(cat => (
                     <button
                         key={cat}
                         onClick={() => setActiveCategory(cat)}
-                        style={{ ...styles.catBtn, background: activeCategory === cat ? '#6366f1' : '#fff', color: activeCategory === cat ? '#fff' : '#64748b', border: activeCategory === cat ? 'none' : '1px solid #e2e8f0' }}
+                        className="explorar-cat-btn"
+                        style={{ background: activeCategory === cat ? '#6366f1' : '#fff', color: activeCategory === cat ? '#fff' : '#64748b', border: activeCategory === cat ? 'none' : '1px solid #e2e8f0' }}
                     >
                         {cat}
                     </button>
                 ))}
             </div>
 
-            <p style={styles.resultsCount}>{filteredResultados.length} destinos encontrados</p>
+            <p className="explorar-results-count">{filteredResultados.length} destinos encontrados</p>
 
-            <div style={styles.grid}>
+            <div className="explorar-grid">
                 {filteredResultados.map(res => (
-                    <div key={res.id} style={styles.card}>
-                        <div style={styles.imgBadge}>⭐ {res.rating}</div>
-                        <img src={res.img} alt={res.nombre} style={styles.cardImg} />
-                        <div style={styles.cardInfo}>
+                    <div key={res.id} className="explorar-card">
+                        <div className="explorar-img-badge">⭐ {res.rating}</div>
+                        <img src={res.img} alt={res.nombre} className="explorar-card-img" />
+                        <div className="explorar-card-info">
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                                 <h3 style={{ margin: 0, fontSize: '18px' }}>{res.nombre}</h3>
                                 <span style={{ fontWeight: '800', color: '#6366f1' }}>€{res.precio}</span>
                             </div>
                             <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '14px' }}>📍 {res.pais}</p>
-                            <div style={styles.tagGrid}>
-                                {res.tags.slice(0, 3).map(t => <span key={t} style={styles.tag}>{t}</span>)}
+                            <div className="explorar-tag-grid">
+                                {res.tags.slice(0, 3).map(t => <span key={t} className="explorar-tag">{t}</span>)}
                             </div>
                         </div>
                     </div>
@@ -128,29 +133,6 @@ const Explorar = () => {
             </div>
         </div>
     );
-};
-
-const styles = {
-    page: { padding: '20px', paddingBottom: '100px', backgroundColor: '#f8fafc', minHeight: '100vh' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' },
-    title: { fontSize: '28px', fontWeight: '800', margin: 0 },
-    filterToggle: { padding: '10px 18px', borderRadius: '14px', border: 'none', fontWeight: '700', cursor: 'pointer', fontSize: '13px' },
-    advancedFilters: { backgroundColor: '#fff', borderRadius: '24px', padding: '20px', marginBottom: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' },
-    filterGroup: { marginBottom: '20px' },
-    groupLabel: { display: 'block', fontSize: '14px', fontWeight: '700', color: '#1e293b', marginBottom: '12px' },
-    rangeInput: { width: '100%', accentColor: '#6366f1' },
-    chipGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
-    chip: { padding: '6px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', cursor: 'pointer', fontSize: '12px', fontWeight: '600' },
-    categoryRow: { display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '15px' },
-    catBtn: { padding: '10px 20px', borderRadius: '20px', cursor: 'pointer', whiteSpace: 'nowrap', fontWeight: '700', fontSize: '14px' },
-    resultsCount: { color: '#64748b', margin: '15px 0', fontSize: '14px', fontWeight: '600' },
-    grid: { display: 'flex', flexDirection: 'column', gap: '20px' },
-    card: { backgroundColor: '#fff', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', position: 'relative' },
-    imgBadge: { position: 'absolute', top: '15px', right: '15px', backgroundColor: 'rgba(255,255,255,0.9)', padding: '5px 10px', borderRadius: '10px', fontSize: '12px', fontWeight: '800', zIndex: 1 },
-    cardImg: { width: '100%', height: '180px', objectFit: 'cover' },
-    cardInfo: { padding: '20px' },
-    tagGrid: { display: 'flex', gap: '8px', flexWrap: 'wrap' },
-    tag: { padding: '4px 12px', background: '#f1f5f9', color: '#475569', borderRadius: '10px', fontSize: '11px', fontWeight: '700' }
 };
 
 export default Explorar;

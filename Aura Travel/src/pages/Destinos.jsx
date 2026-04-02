@@ -1,13 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { UserContext } from '../context/UserContext';
+import { useNotification } from '../context/NotificationContext';
 // Importamos los componentes que creaste por aparte
 import Explorar from './Explorar';
 import Itinerario from './Itinerario';
 import Alertas from './Alertas';
 import Perfil from './Perfil';
+import './styles/Destinos.css';
 
 const Destinos = () => {
     // Estado para controlar qué vista mostrar
     const [seccionActiva, setSeccionActiva] = useState('inicio');
+    const { user } = useContext(UserContext);
+    const { showNotification } = useNotification();
+    const navigate = useNavigate();
+
+    const handleNavClick = (seccion) => {
+        if (!user && (seccion === 'perfil' || seccion === 'itinerario' || seccion === 'alertas')) {
+            showNotification(`Necesitas iniciar sesión para ver esta sección.`, "error");
+            navigate('/login');
+            return;
+        }
+        setSeccionActiva(seccion);
+    };
 
     const destinosDestacados = [
         { id: 1, nombre: 'Santorini, Grecia', rating: 4.9, img: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=600' },
@@ -24,47 +40,51 @@ const Destinos = () => {
             case 'perfil': return <Perfil />;
             default: return (
                 <div className="anim-fade">
-                    <header style={styles.header}>
+                    <header className="destinos-header">
                         <div>
-                            <p style={styles.welcomeText}>¡Hola de nuevo!</p>
-                            <h1 style={styles.userName}>Ana García</h1>
+                            <p className="destinos-welcome-text">¡Hola de nuevo!</p>
+                            <h1 className="destinos-user-name">{user ? user.user_metadata?.name || 'Viajero' : 'Aventurero'}</h1>
                         </div>
-                        <img src="https://i.pravatar.cc/150?u=ana" alt="Perfil" style={styles.profilePic} />
+                        {user ? (
+                            <img src="https://i.pravatar.cc/150?u=ana" alt="Perfil" className="destinos-profile-pic" />
+                        ) : (
+                            <div className="destinos-profile-pic" style={{ backgroundColor: '#e2e8f0', color: '#64748b' }}>👤</div>
+                        )}
                     </header>
 
-                    <div style={styles.searchContainer}>
-                        <input type="text" placeholder="Buscar destinos..." style={styles.searchInput} />
+                    <div className="destinos-search-container">
+                        <input type="text" placeholder="Buscar destinos..." className="destinos-search-input" />
                     </div>
 
-                    <div style={styles.iaCard}>
-                        <div style={styles.iaIcon}>✨</div>
-                        <div style={styles.iaContent}>
-                            <h3 style={styles.iaTitle}>Aura AI te recomienda</h3>
-                            <p style={styles.iaSubtitle}>Basado en tus preferencias, Santorini es perfecta para tu próximo viaje</p>
-                            <button style={styles.iaButton}>Explorar con IA</button>
+                    <div className="destinos-ia-card">
+                        <div className="destinos-ia-icon">✨</div>
+                        <div>
+                            <h3 className="destinos-ia-title">Aura AI te recomienda</h3>
+                            <p className="destinos-ia-subtitle">Basado en tus preferencias, Santorini es perfecta para tu próximo viaje</p>
+                            <button className="destinos-ia-button">Explorar con IA</button>
                         </div>
                     </div>
 
-                    <div style={styles.statsRow}>
-                        <div style={styles.statCard}><span>📅</span><h2 style={styles.statValue}>1</h2><p style={styles.statLabel}>Reserva activa</p></div>
-                        <div style={styles.statCard}><span>📍</span><h2 style={styles.statValue}>5</h2><p style={styles.statLabel}>Favoritos</p></div>
-                        <div style={styles.statCard}><span>📈</span><h2 style={styles.statValue}>3</h2><p style={styles.statLabel}>Itinerarios</p></div>
+                    <div className="destinos-stats-row">
+                        <div className="destinos-stat-card"><span className="destinos-stat-icon">📅</span><h2 className="destinos-stat-value">1</h2><p className="destinos-stat-label">Reserva activa</p></div>
+                        <div className="destinos-stat-card"><span className="destinos-stat-icon">📍</span><h2 className="destinos-stat-value">5</h2><p className="destinos-stat-label">Favoritos</p></div>
+                        <div className="destinos-stat-card"><span className="destinos-stat-icon">📈</span><h2 className="destinos-stat-value">3</h2><p className="destinos-stat-label">Itinerarios</p></div>
                     </div>
 
-                    <div style={styles.sectionHeader}>
-                        <h2 style={styles.sectionTitle}>Destinos destacados</h2>
-                        <span style={styles.viewAll}>Ver todos</span>
+                    <div className="destinos-section-header">
+                        <h2 className="destinos-section-title">Destinos destacados</h2>
+                        <span className="destinos-view-all">Ver todos</span>
                     </div>
 
-                    <div style={styles.destinosGrid}>
+                    <div className="destinos-grid">
                         {destinosDestacados.map(dest => (
-                            <div key={dest.id} style={styles.destCard}>
-                                <div style={styles.destImgContainer}>
-                                    <img src={dest.img} alt={dest.nombre} style={styles.destImg} />
-                                    <div style={styles.ratingBadge}>⭐ {dest.rating}</div>
+                            <div key={dest.id} className="destinos-card">
+                                <div className="destinos-img-container">
+                                    <img src={dest.img} alt={dest.nombre} className="destinos-img" />
+                                    <div className="destinos-rating-badge">⭐ {dest.rating}</div>
                                 </div>
-                                <div style={styles.destInfo}>
-                                    <h3 style={styles.destName}>{dest.nombre}</h3>
+                                <div className="destinos-info">
+                                    <h3 className="destinos-name">{dest.nombre}</h3>
                                 </div>
                             </div>
                         ))}
@@ -75,77 +95,37 @@ const Destinos = () => {
     };
 
     return (
-        <div style={styles.container}>
-            <style>{`
-                @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-                .anim-fade { animation: fadeIn 0.4s ease-out forwards; }
-            `}</style>
-
+        <div className="destinos-container">
             {/* Contenido Dinámico */}
             <div style={{ flex: 1 }}>
                 {renderContent()}
             </div>
 
             {/* Barra de Navegación Inferior Funcional */}
-            <nav style={styles.bottomNav}>
-                <div onClick={() => setSeccionActiva('inicio')} style={{ ...styles.navItem, color: seccionActiva === 'inicio' ? '#6366f1' : '#94a3b8' }}>
-                    <span style={styles.navIcon}>🏠</span>
-                    <span style={styles.navLabel}>Inicio</span>
+            <nav className="destinos-bottom-nav">
+                <div onClick={() => handleNavClick('inicio')} className="destinos-nav-item" style={{ color: seccionActiva === 'inicio' ? '#6366f1' : '#94a3b8' }}>
+                    <span className="destinos-nav-icon">🏠</span>
+                    <span className="destinos-nav-label">Inicio</span>
                 </div>
-                <div onClick={() => setSeccionActiva('explorar')} style={{ ...styles.navItem, color: seccionActiva === 'explorar' ? '#6366f1' : '#94a3b8' }}>
-                    <span style={styles.navIcon}>🧭</span>
-                    <span style={styles.navLabel}>Explorar</span>
+                <div onClick={() => handleNavClick('explorar')} className="destinos-nav-item" style={{ color: seccionActiva === 'explorar' ? '#6366f1' : '#94a3b8' }}>
+                    <span className="destinos-nav-icon">🧭</span>
+                    <span className="destinos-nav-label">Explorar</span>
                 </div>
-                <div onClick={() => setSeccionActiva('itinerario')} style={{ ...styles.navItem, color: seccionActiva === 'itinerario' ? '#6366f1' : '#94a3b8' }}>
-                    <span style={styles.navIcon}>🗺️</span>
-                    <span style={styles.navLabel}>Itinerario</span>
+                <div onClick={() => handleNavClick('itinerario')} className="destinos-nav-item" style={{ color: seccionActiva === 'itinerario' ? '#6366f1' : '#94a3b8' }}>
+                    <span className="destinos-nav-icon">🗺️</span>
+                    <span className="destinos-nav-label">Itinerario</span>
                 </div>
-                <div onClick={() => setSeccionActiva('alertas')} style={{ ...styles.navItem, color: seccionActiva === 'alertas' ? '#6366f1' : '#94a3b8' }}>
-                    <span style={styles.navIcon}>🔔</span>
-                    <span style={styles.navLabel}>Alertas</span>
+                <div onClick={() => handleNavClick('alertas')} className="destinos-nav-item" style={{ color: seccionActiva === 'alertas' ? '#6366f1' : '#94a3b8' }}>
+                    <span className="destinos-nav-icon">🔔</span>
+                    <span className="destinos-nav-label">Alertas</span>
                 </div>
-                <div onClick={() => setSeccionActiva('perfil')} style={{ ...styles.navItem, color: seccionActiva === 'perfil' ? '#6366f1' : '#94a3b8' }}>
-                    <span style={styles.navIcon}>👤</span>
-                    <span style={styles.navLabel}>Perfil</span>
+                <div onClick={() => handleNavClick('perfil')} className="destinos-nav-item" style={{ color: seccionActiva === 'perfil' ? '#6366f1' : '#94a3b8' }}>
+                    <span className="destinos-nav-icon">👤</span>
+                    <span className="destinos-nav-label">Perfil</span>
                 </div>
             </nav>
         </div>
     );
-};
-
-// ... (Tus estilos se mantienen iguales)
-const styles = {
-    container: { backgroundColor: '#f8fafc', minHeight: '100vh', padding: '20px 20px 100px 20px', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: 'linear-gradient(90deg, #6366f1 0%, #a855f7 100%)', margin: '-20px -20px 20px -20px', padding: '40px 20px 60px 20px', color: 'white', borderBottomLeftRadius: '30px', borderBottomRightRadius: '30px' },
-    welcomeText: { fontSize: '14px', opacity: 0.9, margin: 0 },
-    userName: { fontSize: '24px', fontWeight: 'bold', margin: 0 },
-    profilePic: { width: '45px', height: '45px', borderRadius: '50%', border: '2px solid white' },
-    searchContainer: { marginTop: '-45px', marginBottom: '25px' },
-    searchInput: { width: '100%', padding: '15px 20px', borderRadius: '15px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', fontSize: '16px', boxSizing: 'border-box' },
-    iaCard: { backgroundColor: '#f3f4ff', borderRadius: '20px', padding: '20px', display: 'flex', gap: '15px', marginBottom: '25px', border: '1px solid #e0e4ff' },
-    iaIcon: { width: '40px', height: '40px', backgroundColor: '#6366f1', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '20px' },
-    iaTitle: { margin: '0 0 5px 0', fontSize: '16px', fontWeight: 'bold', color: '#1e293b' },
-    iaSubtitle: { margin: '0 0 15px 0', fontSize: '13px', color: '#64748b', lineHeight: '1.4' },
-    iaButton: { backgroundColor: '#10b981', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
-    statsRow: { display: 'flex', gap: '15px', marginBottom: '30px' },
-    statCard: { flex: 1, backgroundColor: 'white', padding: '15px', borderRadius: '20px', textAlign: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.02)' },
-    statIcon: { fontSize: '20px', display: 'block', marginBottom: '5px' },
-    statValue: { fontSize: '22px', fontWeight: 'bold', margin: '5px 0', color: '#1e293b' },
-    statLabel: { fontSize: '12px', color: '#94a3b8', margin: 0 },
-    sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' },
-    sectionTitle: { fontSize: '18px', fontWeight: 'bold', color: '#1e293b', margin: 0 },
-    viewAll: { fontSize: '14px', color: '#6366f1', fontWeight: '600' },
-    destinosGrid: { display: 'flex', flexDirection: 'column', gap: '20px' },
-    destCard: { backgroundColor: 'white', borderRadius: '25px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' },
-    destImgContainer: { position: 'relative', height: '180px' },
-    destImg: { width: '100%', height: '100%', objectFit: 'cover' },
-    ratingBadge: { position: 'absolute', top: '15px', right: '15px', backgroundColor: 'white', padding: '4px 10px', borderRadius: '12px', fontWeight: 'bold', fontSize: '12px' },
-    destInfo: { padding: '15px' },
-    destName: { margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#1e293b' },
-    bottomNav: { position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: 'white', display: 'flex', justifyContent: 'space-around', padding: '15px 10px', borderTop: '1px solid #f1f5f9', zIndex: 100 },
-    navItem: { display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', transition: 'color 0.3s ease' },
-    navIcon: { fontSize: '20px', marginBottom: '4px' },
-    navLabel: { fontSize: '11px', fontWeight: '600' }
 };
 
 export default Destinos;

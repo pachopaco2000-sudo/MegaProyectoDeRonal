@@ -1,0 +1,30 @@
+.detalle-container { background-color: #fff; min-height: 100vh; padding-bottom: 100px; }
+.detalle-hero-section { position: relative; height: 400px; overflow: hidden; }
+.detalle-hero-img { width: 100%; height: 100%; object-fit: cover; }
+.detalle-back-btn { position: absolute; top: 20px; left: 20px; width: 40px; height: 40px; border-radius: 50%; background-color: rgba(255,255,255,0.9); border: none; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: background-color 0.3s; }
+.detalle-hero-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 40px 20px; background: linear-gradient(transparent, rgba(0,0,0,0.8)); color: #fff; }
+.detalle-tag { display: inline-block; padding: 4px 12px; background-color: #6366f1; border-radius: 10px; font-size: 12px; font-weight: 700; margin-bottom: 10px; }
+.detalle-hero-title { font-size: 32px; font-weight: 800; margin: 0 0 5px 0; }
+.detalle-rating-row { display: flex; align-items: center; font-size: 14px; font-weight: 600; opacity: 0.9; }
+.detalle-content { padding: 30px 20px; }
+.detalle-tab-row { display: flex; gap: 25px; border-bottom: 1px solid #f1f5f9; margin-bottom: 25px; }
+.detalle-tab-btn { background: none; border: none; padding: 10px 0; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.3s; }
+.detalle-section-title { font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 15px; }
+.detalle-desc-text { color: #64748b; font-size: 15px; line-height: 1.6; margin-bottom: 25px; }
+.detalle-list { display: flex; flex-direction: column; gap: 12px; }
+.detalle-list-item { background-color: #f8fafc; padding: 15px; border-radius: 16px; font-size: 14px; font-weight: 600; color: #475569; }
+.detalle-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.detalle-info-card { background-color: #f8fafc; padding: 15px; border-radius: 20px; display: flex; align-items: center; gap: 12px; }
+.detalle-info-icon { font-size: 22px; }
+.detalle-info-label { font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; }
+.detalle-info-value { font-size: 14px; font-weight: 700; color: #1e293b; }
+.detalle-climate-card { background-color: #eff6ff; padding: 20px; border-radius: 24px; border: 1px solid #dbeafe; }
+.detalle-climate-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+.detalle-forecast { display: flex; justify-content: space-between; }
+.detalle-day { text-align: center; }
+.detalle-services-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.detalle-service-item { background-color: #f0fdf4; padding: 12px; border-radius: 12px; font-size: 13px; font-weight: 600; color: #166534; }
+.detalle-footer { position: fixed; bottom: 0; left: 0; right: 0; background-color: #fff; padding: 20px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; z-index: 100; }
+.detalle-price-container { display: flex; flex-direction: column; }
+.detalle-reserve-btn { background-color: #1e293b; color: #fff; border: none; padding: 16px 32px; border-radius: 16px; font-weight: 700; font-size: 16px; cursor: pointer; box-shadow: 0 10px 15px -3px rgba(30, 41, 59, 0.3); transition: transform 0.2s; }
+.detalle-reserve-btn:hover { transform: translateY(-2px); }
