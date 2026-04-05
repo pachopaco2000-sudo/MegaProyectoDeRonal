@@ -1,39 +1,109 @@
-import React, { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useContext } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
 import { useNotification } from '../context/NotificationContext';
+import { supabase } from '../services/supabaseClient';
 import './styles/DestinoDetalle.css';
 
-const DestinoDetalle = ({ destino, onBack }) => {
+const DestinoDetalle = () => {
+        const { id } = useParams();
     const [selectedTab, setSelectedTab] = useState('visión');
-    const { user } = useContext(UserContext);
+    const { user, profile } = useContext(UserContext);
     const { showNotification } = useNotification();
     const navigate = useNavigate();
 
-    // Datos simulados si no se pasan
-    const d = destino || {
-        id: 1,
-        nombre: 'Santorini',
-        pais: 'Grecia',
-        rating: 4.9,
-        precio: 850,
-        img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800',
-        descripcion: 'Una de las islas más famosas de las Cícladas, conocida por sus icónicas cúpulas azules sobre edificios blancos.',
-        clima: '24°C - Soleado',
-        idioma: 'Griego, Inglés',
-        moneda: 'Euro (€)',
-        actividades: ['Atardecer en Oia', 'Tour de Vinos', 'Playas de arena negra'],
-        restaurantes: ['Amoudi Bay', 'Selene', 'Metaxi Mas']
-    };
+    const [destino, setDestino] = useState(null);
+    const [actividades, setActividades] = useState([]);
+    const [restaurantes, setRestaurantes] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const handleReserve = () => {
+    useEffect(() => {
+        const fetchDetalle = async () => {
+            setIsLoading(true);
+            try {
+                // 1. Obtener destino
+                const { data: dData, error: dError } = await supabase
+                    .from('Destino')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
+                
+                if (dError) throw dError;
+                setDestino(dData);
+
+                // 2. Obtener actividades del destino
+                const { data: aData } = await supabase
+                    .from('Actividades')
+                    .select('nombre, precio, duracion, imagen')
+                    .eq('destino_id', id);
+                setActividades(aData || []);
+
+                // 3. Obtener restaurantes del destino
+                const { data: rData } = await supabase
+                    .from('Restaurantes')
+                    .select('nombre, tipoComida, precio, rating')
+                    .eq('destino_id', id);
+                setRestaurantes(rData || []);
+
+            } catch (error) {
+                console.error("Error al cargar detalles del destino:", error);
+                showNotification("No se pudo cargar el destino.", "error");
+                navigate('/destinos');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        if (id) {
+            fetchDetalle();
+        }
+    }, [id, navigate, showNotification]);
+
+    const handleReserve = async () => {
         if (!user) {
             showNotification("Necesitas iniciar sesión para reservar tu viaje.", "error");
             navigate('/login');
             return;
         }
-        showNotification("¡Viaje reservado con éxito!", "success");
+
+        try {
+            const nuevaReserva = {
+                destino: destino.nombre,
+                ubicacion: destino.pais,
+                estado: 'Pendiente',
+                imagen: destino.imagen,
+                correo_usuario: user.email,
+                personas: 1
+            };
+
+            const { error } = await supabase.from('Reservas').insert([nuevaReserva]);
+            if (error) throw error;
+            
+            showNotification("¡Viaje reservado con éxito! Revisa tu itinerario.", "success");
+        } catch (error) {
+            console.error("Error ingresando reserva:", error);
+            showNotification("Error de reserva. Verifica la tabla/columnas.", "error");
+        }
     };
+
+    if (isLoading) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: '#64748b' }}>
+                <h2>Cargando tu próxima aventura... ✨</h2>
+            </div>
+        );
+    }
+
+    if (!destino) return null;
+
+    // Calcular precio promedio o usar uno estático para la reserva
+    const precioBase = actividades.reduce((acc, act) => acc + (Number(act.precio) || 0), 0) + 
+                             Math.floor((Math.random() * 500) + 300); // Base + actividades
+    
+    // RF-10: Localización adaptada al usuario mediante Intl API
+    const userLocale = profile?.idioma === 'en' ? 'en-US' : (profile?.idioma === 'fr' ? 'fr-FR' : 'es-ES');
+    const userCurrency = profile?.moneda || 'EUR';
+    const precioFormateado = new Intl.NumberFormat(userLocale, { style: 'currency', currency: userCurrency }).format(precioBase);
 
     return (
         <div className="detalle-container anim-fade">
@@ -42,29 +112,29 @@ const DestinoDetalle = ({ destino, onBack }) => {
                 .anim-fade { animation: fadeIn 0.5s ease-out; }
             `}</style>
             <div className="detalle-hero-section">
-                <img src={d.img} alt={d.nombre} className="detalle-hero-img" />
-                <button onClick={onBack} className="detalle-back-btn">←</button>
+                <img src={destino.imagen || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800'} alt={destino.nombre} className="detalle-hero-img" />
+                <button onClick={() => navigate(-1)} className="detalle-back-btn">←</button>
                 <div className="detalle-hero-overlay">
-                    <div className="detalle-tag">{d.pais}</div>
-                    <h1 className="detalle-hero-title">{d.nombre}</h1>
+                    <div className="detalle-tag">{destino.pais}</div>
+                    <h1 className="detalle-hero-title">{destino.nombre}</h1>
                     <div className="detalle-rating-row">
-                        <span>⭐ {d.rating}</span>
+                        <span>⭐ {destino.rating || 'Nuevo'}</span>
                         <span style={{ margin: '0 10px' }}>•</span>
-                        <span>€{d.precio} por persona</span>
+                        <span>{precioFormateado} aprox. por persona</span>
                     </div>
                 </div>
             </div>
 
             <div className="detalle-content">
                 <div className="detalle-tab-row">
-                    {['visión', 'detalles', 'clima', 'servicios'].map(tab => (
+                    {['visión', 'actividades', 'restaurantes', 'clima', 'servicios'].map(tab => (
                         <button
                             key={tab}
                             onClick={() => setSelectedTab(tab)}
                             className="detalle-tab-btn"
-                            style={{ borderBottom: selectedTab === tab ? '3px solid #6366f1' : 'none', color: selectedTab === tab ? '#6366f1' : '#94a3b8' }}
+                            style={{ borderBottom: selectedTab === tab ? '3px solid #6366f1' : 'none', color: selectedTab === tab ? '#6366f1' : '#94a3b8', textTransform: 'capitalize' }}
                         >
-                            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                            {tab}
                         </button>
                     ))}
                 </div>
@@ -72,48 +142,55 @@ const DestinoDetalle = ({ destino, onBack }) => {
                 <div>
                     {selectedTab === 'visión' && (
                         <div className="anim-fade">
-                            <h3 className="detalle-section-title">Sobre el destino</h3>
-                            <p className="detalle-desc-text">{d.descripcion} Es el lugar perfecto para escapadas románticas o aventuras inolvidables frente al mar Egeo.</p>
-
-                            <h3 className="detalle-section-title">Lo que no te puedes perder</h3>
-                            <div className="detalle-list">
-                                {d.actividades.map((act, i) => (
-                                    <div key={i} className="detalle-list-item">✨ {act}</div>
-                                ))}
+                            <h3 className="detalle-section-title">Sobre {destino.nombre}</h3>
+                            <p className="detalle-desc-text">Descubre la maravilla que este lugar tiene para ofrecerte. Explora su cultura y paisajes inolvidables en {destino.pais}.</p>
+                            
+                            <div className="detalle-info-grid" style={{marginTop: '20px'}}>
+                                <div className="detalle-info-card">
+                                    <span className="detalle-info-icon">🗣️</span>
+                                    <div><div className="detalle-info-label">País</div><div className="detalle-info-value">{destino.pais}</div></div>
+                                </div>
+                                <div className="detalle-info-card">
+                                    <span className="detalle-info-icon">🌤️</span>
+                                    <div><div className="detalle-info-label">Temporada ideal</div><div className="detalle-info-value">{destino.clima || 'Cualquiera'}</div></div>
+                                </div>
                             </div>
                         </div>
                     )}
 
-                    {selectedTab === 'detalles' && (
-                        <div className="anim-fade detalle-info-grid">
-                            <div className="detalle-info-card">
-                                <span className="detalle-info-icon">🗣️</span>
-                                <div>
-                                    <div className="detalle-info-label">Idiomas</div>
-                                    <div className="detalle-info-value">{d.idioma}</div>
+                    {selectedTab === 'actividades' && (
+                        <div className="anim-fade">
+                            <h3 className="detalle-section-title">Lo que no te puedes perder</h3>
+                            {actividades.length === 0 ? (
+                                <p style={{color: '#64748b'}}>No hay actividades registradas aún.</p>
+                            ) : (
+                                <div className="detalle-list">
+                                    {actividades.map((act, i) => (
+                                        <div key={i} className="detalle-list-item" style={{display:'flex', justifyContent:'space-between'}}>
+                                            <span>✨ <strong>{act.nombre}</strong> ({act.duracion})</span>
+                                            <span style={{color: '#6366f1', fontWeight: 'bold'}}>€{act.precio}</span>
+                                        </div>
+                                    ))}
                                 </div>
-                            </div>
-                            <div className="detalle-info-card">
-                                <span className="detalle-info-icon">💰</span>
-                                <div>
-                                    <div className="detalle-info-label">Moneda</div>
-                                    <div className="detalle-info-value">{d.moneda}</div>
+                            )}
+                        </div>
+                    )}
+
+                    {selectedTab === 'restaurantes' && (
+                        <div className="anim-fade">
+                            <h3 className="detalle-section-title">Dónde comer</h3>
+                            {restaurantes.length === 0 ? (
+                                <p style={{color: '#64748b'}}>No hay restaurantes registrados aún.</p>
+                            ) : (
+                                <div className="detalle-list">
+                                    {restaurantes.map((rest, i) => (
+                                        <div key={i} className="detalle-list-item" style={{display:'flex', justifyContent:'space-between'}}>
+                                            <span>🍽️ <strong>{rest.nombre}</strong> <span style={{fontSize: '12px', color: '#64748b'}}>({rest.tipoComida})</span></span>
+                                            <span>⭐ {rest.rating}</span>
+                                        </div>
+                                    ))}
                                 </div>
-                            </div>
-                            <div className="detalle-info-card">
-                                <span className="detalle-info-icon">🍽️</span>
-                                <div>
-                                    <div className="detalle-info-label">Gastronomía</div>
-                                    <div className="detalle-info-value">Mediterránea</div>
-                                </div>
-                            </div>
-                            <div className="detalle-info-card">
-                                <span className="detalle-info-icon">⏱️</span>
-                                <div>
-                                    <div className="detalle-info-label">Mejor época</div>
-                                    <div className="detalle-info-value">Mayo - Septiembre</div>
-                                </div>
-                            </div>
+                            )}
                         </div>
                     )}
 
@@ -122,8 +199,8 @@ const DestinoDetalle = ({ destino, onBack }) => {
                             <div className="detalle-climate-header">
                                 <span style={{ fontSize: '40px' }}>☀️</span>
                                 <div>
-                                    <h2 style={{ margin: 0 }}>{d.clima}</h2>
-                                    <p style={{ margin: 0, color: '#64748b' }}>Cielo despejado ahora mismo</p>
+                                    <h2 style={{ margin: 0 }}>{destino.clima || 'Clima Agradable'}</h2>
+                                    <p style={{ margin: 0, color: '#64748b' }}>Condiciones según la temporada</p>
                                 </div>
                             </div>
                             <div className="detalle-forecast">
@@ -140,9 +217,9 @@ const DestinoDetalle = ({ destino, onBack }) => {
 
                     {selectedTab === 'servicios' && (
                         <div className="anim-fade">
-                            <h3 className="detalle-section-title">Servicios disponibles</h3>
+                            <h3 className="detalle-section-title">Servicios sugeridos de viaje</h3>
                             <div className="detalle-services-grid">
-                                {['WiFi Gratis', 'Transporte', 'Guía Local', 'Seguro Viaje'].map(s => (
+                                {['WiFi Hotel', 'Transporte Aeropuerto', 'Seguro Viajero'].map(s => (
                                     <div key={s} className="detalle-service-item">✅ {s}</div>
                                 ))}
                             </div>
@@ -153,10 +230,10 @@ const DestinoDetalle = ({ destino, onBack }) => {
 
             <div className="detalle-footer">
                 <div className="detalle-price-container">
-                    <div style={{ fontSize: '13px', color: '#64748b' }}>Precio total</div>
-                    <div style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b' }}>€{d.precio}</div>
+                    <div style={{ fontSize: '13px', color: '#64748b' }}>Referencia de Paquete</div>
+                    <div style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b' }}>{precioFormateado}</div>
                 </div>
-                <button onClick={handleReserve} className="detalle-reserve-btn">Reservar Viaje</button>
+                <button onClick={handleReserve} className="detalle-reserve-btn">Reservar Paquete</button>
             </div>
         </div>
     );

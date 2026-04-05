@@ -55,9 +55,9 @@ const ActividadesAd = () => {
         }
     };
 
-    const filtered = activities.filter(a =>
-        a.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        a.Destino?.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
+    const filtered = activities.filter(a => 
+        (a.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (a.ubicacion || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const handleOpenModal = (activity = null) => {

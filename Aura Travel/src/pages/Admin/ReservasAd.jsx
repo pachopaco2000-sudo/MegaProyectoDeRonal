@@ -6,7 +6,7 @@ const ReservasAd = () => {
     const [reservations, setReservations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    const defaultForm = { target: '', location: '', date: '', duration: '', people: 1, status: 'Pendiente', image: '' };
+    const defaultForm = { destino: '', ubicacion: '', date: '', duration: '', personas: 1, status: 'Pendiente', imagen: '' };
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentBooking, setCurrentBooking] = useState(null);
     const [formData, setFormData] = useState(defaultForm);
@@ -34,21 +34,21 @@ const ReservasAd = () => {
     };
 
     const filtered = reservations.filter(r =>
-        r.target?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.id?.toString().includes(searchTerm)
+        (r.destino || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (r?.id || '').toString().includes(searchTerm)
     );
 
     const handleOpenModal = (res = null) => {
         if (res) {
             setCurrentBooking(res);
             setFormData({ 
-                target: res.target || '', 
-                location: res.location || '', 
+                destino: res.destino || '', 
+                ubicacion: res.ubicacion || '', 
                 date: res.fechaInicio || '', 
                 duration: res.fechaFin || '', 
-                people: res.people || 1, 
+                personas: res.personas || 1, 
                 status: res.estado || 'Pendiente',
-                image: res.image || ''
+                imagen: res.imagen || ''
             });
         } else {
             setCurrentBooking(null);
@@ -62,13 +62,13 @@ const ReservasAd = () => {
         setIsLoading(true);
         try {
             const payload = {
-                target: formData.target,
-                location: formData.location,
+                destino: formData.destino,
+                ubicacion: formData.ubicacion,
                 fechaInicio: formData.date || null,
                 fechaFin: formData.duration || null,
-                people: parseInt(formData.people) || 1,
+                personas: parseInt(formData.personas) || 1,
                 estado: formData.status,
-                image: formData.image
+                imagen: formData.imagen
             };
 
             if (currentBooking) {
@@ -133,14 +133,14 @@ const ReservasAd = () => {
                     ) : (
                         filtered.map(res => (
                             <div key={res.id} style={styles.card}>
-                                <img src={res.image || 'https://via.placeholder.com/150'} alt={res.target} style={styles.img} />
+                                <img src={res.imagen || 'https://via.placeholder.com/150'} alt={res.destino} style={styles.img} />
                                 <div style={styles.info}>
-                                    <h3 style={styles.name}>{res.target}</h3>
-                                    <div style={styles.loc}>📍 {res.location}</div>
+                                    <h3 style={styles.name}>{res.destino}</h3>
+                                    <div style={styles.loc}>📍 {res.ubicacion}</div>
                                     <div style={styles.meta}>
-                                        📅 {res.fechaInicio} a {res.fechaFin} • 👥 {res.people} personas
+                                        📅 {res.fechaInicio || 'N/A'} a {res.fechaFin || 'N/A'} • 👥 {res.personas} personas
                                     </div>
-                                    <div style={styles.id}>ID: #{res.id}</div>
+                                    <div style={styles.id}>ID: #{res.id} | Viajero: {res.correo_usuario || 'Desconocido'}</div>
                                 </div>
                                 <div style={{ ...styles.badge, backgroundColor: res.estado === 'Confirmada' ? '#2dd4bf22' : (res.estado === 'Cancelada' ? '#f43f5e22' : '#fbbf2422'), color: res.estado === 'Confirmada' ? '#0d9488' : (res.estado === 'Cancelada' ? '#e11d48' : '#b45309') }}>
                                     {res.estado || 'Pendiente'}
@@ -162,26 +162,26 @@ const ReservasAd = () => {
                         <form onSubmit={handleSave}>
                             <div style={styles.formGroup}>
                                 <label style={styles.label}>Destino / Título</label>
-                                <input style={styles.modalInput} value={formData.target} onChange={e => setFormData({ ...formData, target: e.target.value })} required />
+                                <input style={styles.modalInput} value={formData.destino} onChange={e => setFormData({ ...formData, destino: e.target.value })} required />
                             </div>
                             <div style={styles.formGroup}>
                                 <label style={styles.label}>Ubicación</label>
-                                <input style={styles.modalInput} value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} required />
+                                <input style={styles.modalInput} value={formData.ubicacion} onChange={e => setFormData({ ...formData, ubicacion: e.target.value })} required />
                             </div>
                             <div style={{ display: 'flex', gap: '12px' }}>
                                 <div style={{ ...styles.formGroup, flex: 1 }}>
                                     <label style={styles.label}>F. Inicio</label>
-                                    <input type="date" style={styles.modalInput} value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required />
+                                    <input type="date" style={styles.modalInput} value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
                                 </div>
                                 <div style={{ ...styles.formGroup, flex: 1 }}>
                                     <label style={styles.label}>F. Fin</label>
-                                    <input type="date" style={styles.modalInput} value={formData.duration} onChange={e => setFormData({ ...formData, duration: e.target.value })} required />
+                                    <input type="date" style={styles.modalInput} value={formData.duration} onChange={e => setFormData({ ...formData, duration: e.target.value })} />
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '12px' }}>
                                 <div style={{ ...styles.formGroup, flex: 1 }}>
                                     <label style={styles.label}>Personas</label>
-                                    <input type="number" min="1" style={styles.modalInput} value={formData.people} onChange={e => setFormData({ ...formData, people: e.target.value })} required />
+                                    <input type="number" min="1" style={styles.modalInput} value={formData.personas} onChange={e => setFormData({ ...formData, personas: e.target.value })} required />
                                 </div>
                                 <div style={{ ...styles.formGroup, flex: 1 }}>
                                     <label style={styles.label}>Estado</label>
@@ -194,7 +194,7 @@ const ReservasAd = () => {
                             </div>
                             <div style={styles.formGroup}>
                                 <label style={styles.label}>URL Imagen</label>
-                                <input style={styles.modalInput} value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} />
+                                <input style={styles.modalInput} value={formData.imagen} onChange={e => setFormData({ ...formData, imagen: e.target.value })} />
                             </div>
                             <div style={styles.modalActions}>
                                 <button type="button" style={styles.cancelBtn} onClick={() => setIsModalOpen(false)} disabled={isLoading}>Cancelar</button>

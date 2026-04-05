@@ -10,33 +10,42 @@ export function UserProvider({ children }) {
     const [loading, setLoading] = useState(true);
 
     const fetchUserProfile = async (userId) => {
-        const { data } = await supabase
-            .from('Usuarios')
-            .select('*')
-            .eq('id', userId)
-            .single();
-        if (data) setProfile(data);
+        try {
+            const { data, error } = await supabase
+                .from('Usuarios')
+                .select('*')
+                .eq('id', userId)
+                .single();
+            if (data && !error) setProfile(data);
+        } catch (error) {
+            console.error("Error silencioso al obtener perfil:", error);
+        }
     };
 
     useEffect(() => {
         // Obtener la sesión actual al cargar
-        supabase.auth.getSession().then(async ({ data: { session } }) => {
-            setSession(session);
-            setUser(session?.user || null);
-            if (session?.user) await fetchUserProfile(session.user.id);
+        supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+            if (!error) {
+                setSession(session);
+                setUser(session?.user || null);
+                if (session?.user) await fetchUserProfile(session.user.id);
+            }
             setLoading(false);
-        });
+        }).catch(() => setLoading(false));
 
         // Escuchar cambios de autenticación en tiempo real
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            setSession(session);
-            setUser(session?.user || null);
-            if (session?.user) {
-                await fetchUserProfile(session.user.id);
-            } else {
-                setProfile(null);
+            try {
+                setSession(session);
+                setUser(session?.user || null);
+                if (session?.user) {
+                    await fetchUserProfile(session.user.id);
+                } else {
+                    setProfile(null);
+                }
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         });
 
         return () => subscription.unsubscribe();
@@ -74,7 +83,12 @@ export function UserProvider({ children }) {
 
     return (
         <UserContext.Provider value={{ user, session, profile, login, signup, logout, updateProfile, loading }}>
-            {!loading && children}
+            {loading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column', color: '#64748b' }}>
+                    <h2>Conectando con Aura Travel... ✈️</h2>
+                    <p>Verificando credenciales</p>
+                </div>
+            ) : children}
         </UserContext.Provider>
     );
 }

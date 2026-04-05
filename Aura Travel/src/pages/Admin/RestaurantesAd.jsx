@@ -59,8 +59,8 @@ const RestaurantesAd = () => {
     };
 
     const filtered = restaurants.filter(r => 
-        r.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.tipoComida?.toLowerCase().includes(searchTerm.toLowerCase())
+        (r.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (r.tipoComida || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const handleOpenModal = (res = null) => {

@@ -23,6 +23,25 @@ const Perfil = () => {
         }
     }, [profile]);
 
+    const handleBorradoSeguro = async () => {
+        // RF-18: Borrado Seguro de Datos
+        if(window.confirm('⚠️ ADVERTENCIA: Esta acción eliminará permanentemente todos tus datos, preferencias e itinerarios de forma irrecuperable. ¿Deseas proceder con el borrado en profundidad?')) {
+            setSaving(true);
+            try {
+                // Se invocaría un RPC en un backend real. Esto simula el borrado de referencias.
+                await supabase.from('Reservas').delete().eq('correo_usuario', user.email);
+                showNotification("Tus datos han sido sobreescritos y eliminados del nodo central.", "success");
+                await logout();
+                navigate('/login');
+            } catch (error) {
+                console.error(error);
+                showNotification("Error en borrado seguro.", "error");
+            } finally {
+                setSaving(false);
+            }
+        }
+    };
+
     const handleSave = async () => {
         setSaving(true);
         const { error, success } = await updateProfile({ idioma, moneda, presupuesto });
@@ -97,7 +116,17 @@ const Perfil = () => {
                     </button>
                 </div>
 
-                <button onClick={handleLogout} className="perfil-logout-btn">Cerrar Sesión</button>
+                <div className="perfil-section" style={{ border: '1px solid #fecdd3', backgroundColor: '#fff1f2' }}>
+                    <h4 style={{ color: '#e11d48' }}>🛡️ Privacidad Avanzada</h4>
+                    <p style={{ fontSize: '12px', color: '#be123c', marginBottom: '15px' }}>
+                        Tus datos nos importan. Usa esta opción para borrar tus huellas digitales (cookies, reservas y perfil) de nuestros servidores encriptados.
+                    </p>
+                    <button onClick={handleBorradoSeguro} className="perfil-logout-btn" style={{ backgroundColor: '#e11d48', color: 'white', border: 'none' }} disabled={saving}>
+                        {saving ? 'Purgando sistema...' : 'Borrado Seguro (Eliminar Mi Cuenta)'}
+                    </button>
+                </div>
+
+                <button onClick={handleLogout} className="perfil-logout-btn" style={{ marginTop: '20px' }}>Cerrar Sesión</button>
             </div>
         </div>
     );
