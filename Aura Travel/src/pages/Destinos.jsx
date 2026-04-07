@@ -62,7 +62,10 @@ const Destinos = () => {
                         {user ? (
                             <img src="https://i.pravatar.cc/150?u=ana" alt="Perfil" className="destinos-profile-pic" />
                         ) : (
-                            <div className="destinos-profile-pic" style={{ backgroundColor: '#e2e8f0', color: '#64748b' }}>👤</div>
+                            <div className="destinos-auth-group">
+                                <button onClick={() => navigate('/login')} className="destinos-auth-btn login">Entrar</button>
+                                <button onClick={() => navigate('/login', { state: { mode: 'register' } })} className="destinos-auth-btn register">Crear Cuenta</button>
+                            </div>
                         )}
                     </header>
 
@@ -75,14 +78,26 @@ const Destinos = () => {
                         <div>
                             <h3 className="destinos-ia-title">Aura AI te recomienda</h3>
                             <p className="destinos-ia-subtitle">Basado en tus preferencias, Santorini es perfecta para tu próximo viaje</p>
-                            <button className="destinos-ia-button">Explorar con IA</button>
+                            <button className="destinos-ia-button" onClick={() => window.dispatchEvent(new CustomEvent('open-aura-ai'))}>Explorar con IA</button>
                         </div>
                     </div>
 
                     <div className="destinos-stats-row">
-                        <div className="destinos-stat-card"><span className="destinos-stat-icon">📅</span><h2 className="destinos-stat-value">1</h2><p className="destinos-stat-label">Reserva activa</p></div>
-                        <div className="destinos-stat-card"><span className="destinos-stat-icon">📍</span><h2 className="destinos-stat-value">5</h2><p className="destinos-stat-label">Favoritos</p></div>
-                        <div className="destinos-stat-card"><span className="destinos-stat-icon">📈</span><h2 className="destinos-stat-value">3</h2><p className="destinos-stat-label">Itinerarios</p></div>
+                        <div className="destinos-stat-card">
+                            <span className="destinos-stat-icon">📅</span>
+                            <h2 className="destinos-stat-value">1</h2>
+                            <p className="destinos-stat-label">Reserva activa</p>
+                        </div>
+                        <div className="destinos-stat-card">
+                            <span className="destinos-stat-icon">📍</span>
+                            <h2 className="destinos-stat-value">{user ? (JSON.parse(localStorage.getItem(`aura_favs_${user.id}`)) || []).length : 0}</h2>
+                            <p className="destinos-stat-label">Favoritos</p>
+                        </div>
+                        <div className="destinos-stat-card">
+                            <span className="destinos-stat-icon">📈</span>
+                            <h2 className="destinos-stat-value">{user?.reservas || 0}</h2>
+                            <p className="destinos-stat-label">Viajes totales</p>
+                        </div>
                     </div>
 
                     <div className="destinos-section-header">
@@ -92,7 +107,7 @@ const Destinos = () => {
 
                     <div className="destinos-grid">
                         {destinosDestacados.map(dest => (
-                            <div key={dest.id} className="destinos-card" onClick={() => navigate(`/destino/${dest.id}`)} style={{cursor: 'pointer'}}>
+                            <div key={dest.id} className="destinos-card" onClick={() => navigate(`/destinos/${dest.id}`)} style={{cursor: 'pointer'}}>
                                 <div className="destinos-img-container">
                                     <img src={dest.imagen || 'https://via.placeholder.com/600'} alt={dest.nombre} className="destinos-img" />
                                     <div className="destinos-rating-badge">⭐ {dest.rating || 4.5}</div>

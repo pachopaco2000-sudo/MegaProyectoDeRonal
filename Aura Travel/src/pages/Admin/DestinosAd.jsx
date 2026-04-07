@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabaseClient';
+import { useNotification } from '../../context/NotificationContext';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const DestinosAd = () => {
+    const { showNotification } = useNotification();
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null);
     const [destinos, setDestinos] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -32,7 +36,7 @@ const DestinosAd = () => {
             setDestinos(data || []);
         } catch (error) {
             console.error("Error al cargar destinos:", error);
-            alert("Error al cargar los destinos desde la base de datos.");
+            showNotification("Error al cargar los destinos desde la base de datos.", "error");
         } finally {
             setIsLoading(false);
         }
@@ -75,11 +79,13 @@ const DestinosAd = () => {
                     .update(payload)
                     .eq('id', currentDestino.id);
                 if (error) throw error;
+                showNotification("Destino actualizado con éxito.", "success");
             } else {
                 const { error } = await supabase
                     .from('Destino')
                     .insert([payload]);
                 if (error) throw error;
+                showNotification("Destino creado con éxito.", "success");
             }
             
             setIsModalOpen(false);
@@ -87,29 +93,35 @@ const DestinosAd = () => {
             fetchDestinos(); // Recargar datos
         } catch (error) {
             console.error("Error guardando destino:", error);
-            alert("Error al guardar destino: " + error.message);
+            showNotification("Error al guardar destino: " + error.message, "error");
         } finally {
             // El loading se apaga en fetchDestinos, pero si falla lo apagamos aquí
             setIsLoading(false); 
         }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('¿Estás seguro de eliminar este destino?')) {
-            setIsLoading(true);
-            try {
-                const { error } = await supabase
-                    .from('Destino')
-                    .delete()
-                    .eq('id', id);
-                    
-                if (error) throw error;
-                fetchDestinos();
-            } catch (error) {
-                console.error("Error eliminando destino:", error);
-                alert("Hubo un error al eliminar el destino");
-                setIsLoading(false);
-            }
+    const handleDelete = (id) => {
+        setItemToDelete(id);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        setIsLoading(true);
+        try {
+            const { error } = await supabase
+                .from('Destino')
+                .delete()
+                .eq('id', itemToDelete);
+                
+            if (error) throw error;
+            showNotification("Destino eliminado exitosamente.", "success");
+            fetchDestinos();
+        } catch (error) {
+            console.error("Error eliminando destino:", error);
+            showNotification("Hubo un error al eliminar el destino.", "error");
+        } finally {
+            setIsLoading(false);
+            setItemToDelete(null);
         }
     };
 
@@ -267,6 +279,14 @@ const DestinosAd = () => {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal 
+                isOpen={!!itemToDelete} 
+                title="Eliminar Destino" 
+                message="¿Estás seguro de que deseas eliminar este destino? Esta acción también podría eliminar actividades y restaurantes asociados."
+                onConfirm={confirmDelete} 
+                onCancel={() => setItemToDelete(null)} 
+            />
         </div>
     );
 };
@@ -287,7 +307,7 @@ const styles = {
         backgroundColor: '#f1f5f9', borderRadius: '16px', padding: '12px 20px',
         display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid #e2e8f0'
     },
-    input: { background: 'none', border: 'none', outline: 'none', width: '100%', fontSize: '15px' },
+    input: { backgroundColor: 'transparent', border: 'none', outline: 'none', flex: 1, fontSize: '15px', boxSizing: 'border-box', color: '#0f172a' },
     destinosList: { display: 'flex', flexDirection: 'column', gap: '16px' },
     destinoCard: {
         backgroundColor: '#fff', borderRadius: '24px', padding: '16px',
@@ -329,11 +349,11 @@ const styles = {
     label: { fontSize: '13px', fontWeight: '600', color: '#475569' },
     formInput: {
         padding: '12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0',
-        fontSize: '14px', backgroundColor: '#f8fafc'
+        fontSize: '14px', backgroundColor: '#f8fafc', boxSizing: 'border-box', width: '100%'
     },
     formTextarea: {
         padding: '12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0',
-        fontSize: '14px', backgroundColor: '#f8fafc', minHeight: '80px', fontFamily: 'inherit'
+        fontSize: '14px', backgroundColor: '#f8fafc', minHeight: '80px', fontFamily: 'inherit', boxSizing: 'border-box', width: '100%'
     },
     modalFooter: { display: 'flex', gap: '12px', marginTop: '16px' },
     cancelBtn: {

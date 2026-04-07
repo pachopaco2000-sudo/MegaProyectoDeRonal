@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabaseClient';
+import { useNotification } from '../../context/NotificationContext';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const ActividadesAd = () => {
+    const { showNotification } = useNotification();
     const [searchTerm, setSearchTerm] = useState('');
     const [activities, setActivities] = useState([]);
     const [destinos, setDestinos] = useState([]);
@@ -10,6 +13,7 @@ const ActividadesAd = () => {
     const defaultForm = { name: '', type: 'Aventura', price: '', duration: '', destino_id: '', image: '' };
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentActivity, setCurrentActivity] = useState(null);
+    const [itemToDelete, setItemToDelete] = useState(null);
     const [formData, setFormData] = useState(defaultForm);
 
     useEffect(() => {
@@ -94,33 +98,41 @@ const ActividadesAd = () => {
             if (currentActivity) {
                 const { error } = await supabase.from('Actividades').update(payload).eq('id', currentActivity.id);
                 if (error) throw error;
+                showNotification("Actividad actualizada exitosamente.", "success");
             } else {
                 const { error } = await supabase.from('Actividades').insert([payload]);
                 if (error) throw error;
+                showNotification("Actividad creada exitosamente.", "success");
             }
             setIsModalOpen(false);
             setFormData(defaultForm);
             fetchActividades();
         } catch (error) {
             console.error("Error guardando actividad:", error);
-            alert("Hubo un error al guardar la actividad.");
+            showNotification("Hubo un error al guardar la actividad.", "error");
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('¿Deseas eliminar esta actividad?')) {
-            setIsLoading(true);
-            try {
-                const { error } = await supabase.from('Actividades').delete().eq('id', id);
-                if (error) throw error;
-                fetchActividades();
-            } catch (error) {
-                console.error("Error eliminando actividad:", error);
-                alert("Hubo un error al eliminar.");
-                setIsLoading(false);
-            }
+    const handleDelete = (id) => {
+        setItemToDelete(id);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        setIsLoading(true);
+        try {
+            const { error } = await supabase.from('Actividades').delete().eq('id', itemToDelete);
+            if (error) throw error;
+            showNotification("Actividad eliminada.", "success");
+            fetchActividades();
+        } catch (error) {
+            console.error("Error eliminando actividad:", error);
+            showNotification("Hubo un error al eliminar.", "error");
+        } finally {
+            setIsLoading(false);
+            setItemToDelete(null);
         }
     };
 
@@ -239,6 +251,14 @@ const ActividadesAd = () => {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal 
+                isOpen={!!itemToDelete} 
+                title="Eliminar Actividad" 
+                message="¿Estás seguro de que deseas eliminar esta actividad? Esta acción no se puede deshacer."
+                onConfirm={confirmDelete} 
+                onCancel={() => setItemToDelete(null)} 
+            />
         </div>
     );
 };
@@ -257,7 +277,7 @@ const styles = {
         backgroundColor: '#f1f5f9', borderRadius: '16px', padding: '12px 20px',
         display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid #e2e8f0'
     },
-    input: { background: 'none', border: 'none', outline: 'none', width: '100%', fontSize: '15px' },
+    input: { backgroundColor: 'transparent', border: 'none', outline: 'none', flex: 1, fontSize: '15px', boxSizing: 'border-box', color: '#0f172a' },
     list: { display: 'flex', flexDirection: 'column', gap: '16px' },
     card: {
         backgroundColor: '#fff', borderRadius: '24px', padding: '16px',

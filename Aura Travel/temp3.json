@@ -1,0 +1,42 @@
+[
+  {
+    "id": 3,
+    "nombre": "Test",
+    "tipoComida": "Test",
+    "precio": null,
+    "langitud": null,
+    "rating": 4.5,
+    "imagen": null,
+    "destino_id": null
+  },
+  {
+    "id": 4,
+    "nombre": "Test React",
+    "tipoComida": "Comida",
+    "precio": "c:UsersDaniel ArizDocumentsGitHubMegaProyectoDeRonalAura Travel",
+    "langitud": null,
+    "rating": 5,
+    "imagen": "",
+    "destino_id": null
+  },
+  {
+    "id": 5,
+    "nombre": "Test FK",
+    "tipoComida": "FK Test",
+    "precio": "c:UsersDaniel ArizDocumentsGitHubMegaProyectoDeRonalAura Travel",
+    "langitud": null,
+    "rating": 5,
+    "imagen": "",
+    "destino_id": 3
+  },
+  {
+    "id": 6,
+    "nombre": "Real Test",
+    "tipoComida": "Comida",
+    "precio": "c:UsersDaniel ArizDocumentsGitHubMegaProyectoDeRonalAura Travel$",
+    "langitud": null,
+    "rating": 4.5,
+    "imagen": "",
+    "destino_id": null
+  }
+]

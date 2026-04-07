@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabaseClient';
+import { useNotification } from '../../context/NotificationContext';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const ReservasAd = () => {
+    const { showNotification } = useNotification();
     const [searchTerm, setSearchTerm] = useState('');
     const [reservations, setReservations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    const defaultForm = { destino: '', ubicacion: '', date: '', duration: '', personas: 1, status: 'Pendiente', imagen: '' };
+    const defaultForm = { destino: '', ubicacion: '', date: '', duration: '', personas: 1, status: 'Pendiente', imagen: '', correo_usuario: '' };
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentBooking, setCurrentBooking] = useState(null);
+    const [itemToDelete, setItemToDelete] = useState(null);
     const [formData, setFormData] = useState(defaultForm);
 
     useEffect(() => {
@@ -27,7 +31,7 @@ const ReservasAd = () => {
             setReservations(data || []);
         } catch (error) {
             console.error("Error al obtener reservas:", error);
-            alert("Hubo un error al cargar las reservas.");
+            showNotification("Hubo un error al cargar las reservas.", "error");
         } finally {
             setIsLoading(false);
         }
@@ -48,7 +52,8 @@ const ReservasAd = () => {
                 duration: res.fechaFin || '', 
                 personas: res.personas || 1, 
                 status: res.estado || 'Pendiente',
-                imagen: res.imagen || ''
+                imagen: res.imagen || '',
+                correo_usuario: res.correo_usuario || ''
             });
         } else {
             setCurrentBooking(null);
@@ -68,15 +73,18 @@ const ReservasAd = () => {
                 fechaFin: formData.duration || null,
                 personas: parseInt(formData.personas) || 1,
                 estado: formData.status,
-                imagen: formData.imagen
+                imagen: formData.imagen,
+                correo_usuario: formData.correo_usuario || null
             };
 
             if (currentBooking) {
                 const { error } = await supabase.from('Reservas').update(payload).eq('id', currentBooking.id);
                 if (error) throw error;
+                showNotification("Reserva actualizada con éxito.", "success");
             } else {
                 const { error } = await supabase.from('Reservas').insert([payload]);
                 if (error) throw error;
+                showNotification("Reserva creada con éxito.", "success");
             }
             
             setIsModalOpen(false);
@@ -84,24 +92,30 @@ const ReservasAd = () => {
             fetchReservas();
         } catch (error) {
             console.error("Error guardando reserva:", error);
-            alert("No se pudo guardar la reserva. Verifica que las columnas existan en la base de datos.");
+            showNotification("No se pudo guardar la reserva. Verifica el error.", "error");
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('¿Eliminar esta reserva permanentemente?')) {
-            setIsLoading(true);
-            try {
-                const { error } = await supabase.from('Reservas').delete().eq('id', id);
-                if (error) throw error;
-                fetchReservas();
-            } catch (error) {
-                console.error("Error eliminando reserva:", error);
-                alert("Hubo un error al eliminar.");
-                setIsLoading(false);
-            }
+    const handleDelete = (id) => {
+        setItemToDelete(id);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        setIsLoading(true);
+        try {
+            const { error } = await supabase.from('Reservas').delete().eq('id', itemToDelete);
+            if (error) throw error;
+            showNotification("Reserva eliminada.", "success");
+            fetchReservas();
+        } catch (error) {
+            console.error("Error eliminando reserva:", error);
+            showNotification("Hubo un error al eliminar.", "error");
+        } finally {
+            setIsLoading(false);
+            setItemToDelete(null);
         }
     };
 
@@ -140,7 +154,7 @@ const ReservasAd = () => {
                                     <div style={styles.meta}>
                                         📅 {res.fechaInicio || 'N/A'} a {res.fechaFin || 'N/A'} • 👥 {res.personas} personas
                                     </div>
-                                    <div style={styles.id}>ID: #{res.id} | Viajero: {res.correo_usuario || 'Desconocido'}</div>
+                                    <div style={styles.id}>ID: #{res.id} | Viajero: <span style={{fontWeight:'700'}}>{res.correo_usuario || 'Sin asignar'}</span></div>
                                 </div>
                                 <div style={{ ...styles.badge, backgroundColor: res.estado === 'Confirmada' ? '#2dd4bf22' : (res.estado === 'Cancelada' ? '#f43f5e22' : '#fbbf2422'), color: res.estado === 'Confirmada' ? '#0d9488' : (res.estado === 'Cancelada' ? '#e11d48' : '#b45309') }}>
                                     {res.estado || 'Pendiente'}
@@ -160,6 +174,10 @@ const ReservasAd = () => {
                     <div style={styles.modal}>
                         <h3 style={styles.modalTitle}>{currentBooking ? 'Editar Reserva' : 'Nueva Reserva'}</h3>
                         <form onSubmit={handleSave}>
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>Correo del Usuario Titular</label>
+                                <input style={styles.modalInput} type="email" placeholder="ejemplo@correo.com" value={formData.correo_usuario} onChange={e => setFormData({ ...formData, correo_usuario: e.target.value })} required />
+                            </div>
                             <div style={styles.formGroup}>
                                 <label style={styles.label}>Destino / Título</label>
                                 <input style={styles.modalInput} value={formData.destino} onChange={e => setFormData({ ...formData, destino: e.target.value })} required />
@@ -206,6 +224,14 @@ const ReservasAd = () => {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal 
+                isOpen={!!itemToDelete} 
+                title="Eliminar Reserva" 
+                message="¿Estás seguro de que deseas eliminar esta reserva permanentemente? Esta acción no se puede deshacer."
+                onConfirm={confirmDelete} 
+                onCancel={() => setItemToDelete(null)} 
+            />
         </div>
     );
 };
@@ -224,7 +250,7 @@ const styles = {
         backgroundColor: '#f1f5f9', borderRadius: '16px', padding: '12px 20px',
         display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid #e2e8f0'
     },
-    input: { background: 'none', border: 'none', outline: 'none', width: '100%', fontSize: '15px' },
+    input: { backgroundColor: 'transparent', border: 'none', outline: 'none', flex: 1, fontSize: '15px', boxSizing: 'border-box', color: '#0f172a' },
     list: { display: 'flex', flexDirection: 'column', gap: '16px' },
     card: {
         backgroundColor: '#fff', borderRadius: '24px', padding: '20px',
@@ -235,7 +261,7 @@ const styles = {
     name: { margin: '0 0 4px 0', fontSize: '16px', fontWeight: '700' },
     loc: { fontSize: '13px', color: '#64748b', marginBottom: '8px' },
     meta: { fontSize: '13px', color: '#475569', marginBottom: '4px' },
-    id: { fontSize: '11px', color: '#94a3b8' },
+    id: { fontSize: '12px', color: '#94a3b8' },
     badge: { padding: '6px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: '700' },
     actions: { display: 'flex', gap: '8px' },
     actionBtn: {
@@ -251,12 +277,12 @@ const styles = {
         backgroundColor: '#fff', padding: '30px', borderRadius: '24px',
         width: '450px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
     },
-    modalTitle: { fontSize: '20px', fontWeight: '800', marginBottom: '20px', margin: 0 },
+    modalTitle: { fontSize: '20px', fontWeight: '800', margin: '0 0 20px 0' },
     formGroup: { marginBottom: '16px' },
     label: { display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#64748b' },
     modalInput: {
         width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0',
-        fontSize: '15px', outline: 'none'
+        fontSize: '15px', outline: 'none', boxSizing: 'border-box'
     },
     modalActions: { display: 'flex', gap: '12px', marginTop: '24px' },
     cancelBtn: {

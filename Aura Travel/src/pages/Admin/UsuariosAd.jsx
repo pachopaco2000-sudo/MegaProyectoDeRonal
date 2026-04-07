@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabaseClient';
+import { useNotification } from '../../context/NotificationContext';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const UsuariosAd = () => {
+    const { showNotification } = useNotification();
     const [searchTerm, setSearchTerm] = useState('');
     const [users, setUsers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    const defaultForm = { name: '', email: '', role: 'Usuario', status: 'Activo' };
+    const defaultForm = { nombre: '', correo: '', rol: 'Usuario', estado: 'Activo' };
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
+    const [itemToDelete, setItemToDelete] = useState(null);
     const [formData, setFormData] = useState(defaultForm);
 
     useEffect(() => {
@@ -27,21 +31,21 @@ const UsuariosAd = () => {
             setUsers(data || []);
         } catch (error) {
             console.error("Error al obtener usuarios:", error);
-            alert("Hubo un error al obtener la lista de usuarios.");
+            showNotification("Hubo un error al obtener la lista de usuarios.", "error");
         } finally {
             setIsLoading(false);
         }
     };
 
     const filteredUsers = users.filter(u =>
-        u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+        u.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.correo?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const handleOpenModal = (user = null) => {
         if (user) {
             setCurrentUser(user);
-            setFormData({ name: user.name || '', email: user.email || '', role: user.role || 'Usuario', status: user.status || 'Activo' });
+            setFormData({ nombre: user.nombre || '', correo: user.correo || '', rol: user.rol || 'Usuario', estado: user.estado || 'Activo' });
         } else {
             setCurrentUser(null);
             setFormData(defaultForm);
@@ -55,10 +59,10 @@ const UsuariosAd = () => {
         
         try {
             const payload = {
-                name: formData.name,
-                email: formData.email,
-                role: formData.role,
-                status: formData.status
+                nombre: formData.nombre,
+                correo: formData.correo,
+                rol: formData.rol,
+                estado: formData.estado
             };
 
             if (currentUser) {
@@ -67,13 +71,15 @@ const UsuariosAd = () => {
                     .update(payload)
                     .eq('id', currentUser.id);
                 if (error) throw error;
+                showNotification("Usuario actualizado correctamente.", "success");
             } else {
-                payload.reservations = 0;
+                payload.reservas = 0;
                 payload.color = '#' + Math.floor(Math.random() * 16777215).toString(16);
                 const { error } = await supabase
                     .from('Usuarios')
                     .insert([payload]);
                 if (error) throw error;
+                showNotification("Usuario creado exitosamente.", "success");
             }
             
             setIsModalOpen(false);
@@ -81,42 +87,49 @@ const UsuariosAd = () => {
             fetchUsers();
         } catch (error) {
             console.error("Error guardando usuario:", error);
-            alert("No se pudo guardar el usuario: " + error.message);
+            showNotification("No se pudo guardar el usuario: " + error.message, "error");
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
-            setIsLoading(true);
-            try {
-                const { error } = await supabase
-                    .from('Usuarios')
-                    .delete()
-                    .eq('id', id);
-                if (error) throw error;
-                fetchUsers();
-            } catch (error) {
-                console.error("Error eliminando usuario:", error);
-                alert("Hubo un error al eliminar el usuario");
-                setIsLoading(false);
-            }
+    const handleDelete = (id) => {
+        setItemToDelete(id);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        setIsLoading(true);
+        try {
+            const { error } = await supabase
+                .from('Usuarios')
+                .delete()
+                .eq('id', itemToDelete);
+            if (error) throw error;
+            showNotification("Usuario eliminado.", "success");
+            fetchUsers();
+        } catch (error) {
+            console.error("Error eliminando usuario:", error);
+            showNotification("Hubo un error al eliminar el usuario.", "error");
+        } finally {
+            setIsLoading(false);
+            setItemToDelete(null);
         }
     };
 
     const handleStatusToggle = async (user) => {
-        const newStatus = user.status === 'Activo' ? 'Bloqueado' : 'Activo';
+        const newStatus = user.estado === 'Activo' ? 'Bloqueado' : 'Activo';
         try {
             const { error } = await supabase
                 .from('Usuarios')
-                .update({ status: newStatus })
+                .update({ estado: newStatus })
                 .eq('id', user.id);
             if (error) throw error;
+            showNotification(`Usuario ${newStatus.toLowerCase()} exitosamente.`, "success");
             fetchUsers();
         } catch (error) {
             console.error("Error al actualizar el estado:", error);
-            alert("No se pudo actualizar el estado del usuario.");
+            showNotification("No se pudo actualizar el estado del usuario.", "error");
         }
     };
 
@@ -155,25 +168,25 @@ const UsuariosAd = () => {
                         filteredUsers.map(user => (
                             <div key={user.id} style={styles.userCard}>
                                 <div style={{ ...styles.avatar, backgroundColor: user.color || '#6366f1' }}>
-                                    {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                                    {user.nombre ? user.nombre.charAt(0).toUpperCase() : 'U'}
                                 </div>
                                 <div style={styles.userInfo}>
                                     <div style={styles.nameRow}>
-                                        <h3 style={styles.userName}>{user.name}</h3>
-                                        <span style={{ ...styles.badge, backgroundColor: user.role === 'Administrador' ? '#6366f1' : '#2dd4bf', color: '#fff' }}>
-                                            {user.role}
+                                        <h3 style={styles.userName}>{user.nombre}</h3>
+                                        <span style={{ ...styles.badge, backgroundColor: user.rol === 'Administrador' ? '#6366f1' : '#2dd4bf', color: '#fff' }}>
+                                            {user.rol}
                                         </span>
-                                        <span style={{ ...styles.badge, backgroundColor: user.status === 'Activo' ? '#2dd4bf22' : '#f43f5e22', color: user.status === 'Activo' ? '#0d9488' : '#e11d48' }}>
-                                            {user.status}
+                                        <span style={{ ...styles.badge, backgroundColor: user.estado === 'Activo' ? '#2dd4bf22' : '#f43f5e22', color: user.estado === 'Activo' ? '#0d9488' : '#e11d48' }}>
+                                            {user.estado}
                                         </span>
                                     </div>
-                                    <div style={styles.userEmail}>{user.email}</div>
-                                    <div style={styles.userMeta}>{user.reservations || 0} reservas realizadas</div>
+                                    <div style={styles.userEmail}>{user.correo}</div>
+                                    <div style={styles.userMeta}>{user.reservas || 0} reservas realizadas</div>
                                 </div>
                                 <div style={styles.actions}>
                                     <button style={styles.actionBtn} onClick={() => handleOpenModal(user)} title="Editar">📝</button>
-                                    <button style={styles.actionBtn} onClick={() => handleStatusToggle(user)} title={user.status === 'Activo' ? 'Bloquear' : 'Activar'}>
-                                        {user.status === 'Activo' ? '🚫' : '✅'}
+                                    <button style={styles.actionBtn} onClick={() => handleStatusToggle(user)} title={user.estado === 'Activo' ? 'Bloquear' : 'Activar'}>
+                                        {user.estado === 'Activo' ? '🚫' : '✅'}
                                     </button>
                                     <button style={{ ...styles.actionBtn, color: '#f43f5e' }} onClick={() => handleDelete(user.id)} title="Eliminar">🗑️</button>
                                 </div>
@@ -192,8 +205,8 @@ const UsuariosAd = () => {
                                 <label style={styles.label}>Nombre Completo</label>
                                 <input
                                     style={styles.modalInput}
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                    value={formData.nombre}
+                                    onChange={e => setFormData({ ...formData, nombre: e.target.value })}
                                     required
                                 />
                             </div>
@@ -202,8 +215,8 @@ const UsuariosAd = () => {
                                 <input
                                     type="email"
                                     style={styles.modalInput}
-                                    value={formData.email}
-                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                    value={formData.correo}
+                                    onChange={e => setFormData({ ...formData, correo: e.target.value })}
                                     required
                                 />
                             </div>
@@ -211,8 +224,8 @@ const UsuariosAd = () => {
                                 <label style={styles.label}>Rol</label>
                                 <select
                                     style={styles.modalInput}
-                                    value={formData.role}
-                                    onChange={e => setFormData({ ...formData, role: e.target.value })}
+                                    value={formData.rol}
+                                    onChange={e => setFormData({ ...formData, rol: e.target.value })}
                                 >
                                     <option value="Usuario">Usuario</option>
                                     <option value="Administrador">Administrador</option>
@@ -222,8 +235,8 @@ const UsuariosAd = () => {
                                 <label style={styles.label}>Estado</label>
                                 <select
                                     style={styles.modalInput}
-                                    value={formData.status}
-                                    onChange={e => setFormData({ ...formData, status: e.target.value })}
+                                    value={formData.estado}
+                                    onChange={e => setFormData({ ...formData, estado: e.target.value })}
                                 >
                                     <option value="Activo">Activo</option>
                                     <option value="Bloqueado">Bloqueado</option>
@@ -239,6 +252,14 @@ const UsuariosAd = () => {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal 
+                isOpen={!!itemToDelete} 
+                title="Eliminar Usuario" 
+                message="¿Estás seguro de que quieres eliminar este perfil? Esta acción no se puede deshacer."
+                onConfirm={confirmDelete} 
+                onCancel={() => setItemToDelete(null)} 
+            />
         </div>
     );
 };
@@ -257,7 +278,7 @@ const styles = {
         backgroundColor: '#f1f5f9', borderRadius: '16px', padding: '12px 20px',
         display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid #e2e8f0'
     },
-    input: { background: 'none', border: 'none', outline: 'none', width: '100%', fontSize: '15px' },
+    input: { backgroundColor: 'transparent', border: 'none', outline: 'none', flex: 1, fontSize: '15px', boxSizing: 'border-box', color: '#0f172a' },
     list: { display: 'flex', flexDirection: 'column', gap: '16px' },
     userCard: {
         backgroundColor: '#fff', borderRadius: '24px', padding: '20px',
@@ -290,12 +311,12 @@ const styles = {
         backgroundColor: '#fff', padding: '30px', borderRadius: '24px',
         width: '400px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
     },
-    modalTitle: { fontSize: '20px', fontWeight: '800', marginBottom: '20px', margin: 0 },
+    modalTitle: { fontSize: '20px', fontWeight: '800', margin: '0 0 20px 0' },
     formGroup: { marginBottom: '16px' },
     label: { display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#64748b' },
     modalInput: {
         width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0',
-        fontSize: '15px', outline: 'none', transition: 'border-color 0.2s'
+        fontSize: '15px', outline: 'none', transition: 'border-color 0.2s', boxSizing: 'border-box'
     },
     modalActions: { display: 'flex', gap: '12px', marginTop: '24px' },
     cancelBtn: {

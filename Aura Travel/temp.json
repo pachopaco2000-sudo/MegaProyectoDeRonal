@@ -1,0 +1,12 @@
+[
+  {
+    "id": 3,
+    "nombre": "Test",
+    "tipoComida": "Test",
+    "precio": null,
+    "langitud": null,
+    "rating": 4.5,
+    "imagen": null,
+    "destino_id": null
+  }
+]

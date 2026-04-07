@@ -1,14 +1,16 @@
 import React, { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
 import { useNotification } from '../context/NotificationContext';
 import './styles/Login.css';
 
 const Login = () => {
-    const [mode, setMode] = useState('login');
     const { login, signup } = useContext(UserContext);
     const { showNotification } = useNotification();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const [mode, setMode] = useState(location.state?.mode || 'login');
 
     // Estados para validación
     const [email, setEmail] = useState('');

@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabaseClient';
+import { useNotification } from '../../context/NotificationContext';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const RestaurantesAd = () => {
+    const { showNotification } = useNotification();
     const [searchTerm, setSearchTerm] = useState('');
     const [restaurants, setRestaurants] = useState([]);
     const [destinos, setDestinos] = useState([]);
@@ -10,6 +13,7 @@ const RestaurantesAd = () => {
     const defaultForm = { name: '', type: '', price: '$$', rating: 4.5, image: '', destino_id: '' };
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentRestaurant, setCurrentRestaurant] = useState(null);
+    const [itemToDelete, setItemToDelete] = useState(null);
     const [formData, setFormData] = useState(defaultForm);
 
     useEffect(() => {
@@ -101,18 +105,20 @@ const RestaurantesAd = () => {
             const payloadAjustado = {
                 nombre: formData.name,
                 tipoComida: formData.type,
-                // price: formData.price, Depende del tipo en la BD, mandaremos null si falla al castear 
+                precio: formData.price,
                 rating: parseFloat(formData.rating),
                 imagen: formData.image,
                 destino_id: formData.destino_id ? parseInt(formData.destino_id) : null
             };
 
-            if (currentUser) {
-                const { error } = await supabase.from('Restaurantes').update(payloadAjustado).eq('id', currentUser.id);
+            if (currentRestaurant) {
+                const { error } = await supabase.from('Restaurantes').update(payloadAjustado).eq('id', currentRestaurant.id);
                 if (error) throw error;
+                showNotification("Restaurante actualizado con éxito.", "success");
             } else {
                 const { error } = await supabase.from('Restaurantes').insert([payloadAjustado]);
                 if (error) throw error;
+                showNotification("Restaurante creado con éxito.", "success");
             }
             
             setIsModalOpen(false);
@@ -120,24 +126,30 @@ const RestaurantesAd = () => {
             fetchRestaurantes();
         } catch (error) {
             console.error("Error guardando restaurante:", error);
-            alert("No se pudo guardar el restaurante. Asegurate de que la columna 'precio' permita texto si usas '$$' o actualiza el campo en Supabase.");
+            showNotification("No se pudo guardar el restaurante. Asegurate de que la tabla soporte los parámetros correctos.", "error");
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('¿Eliminar este restaurante?')) {
-            setIsLoading(true);
-            try {
-                const { error } = await supabase.from('Restaurantes').delete().eq('id', id);
-                if (error) throw error;
-                fetchRestaurantes();
-            } catch (error) {
-                console.error("Error eliminando restaurante:", error);
-                alert("Hubo un error al eliminar el restaurante");
-                setIsLoading(false);
-            }
+    const handleDelete = (id) => {
+        setItemToDelete(id);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        setIsLoading(true);
+        try {
+            const { error } = await supabase.from('Restaurantes').delete().eq('id', itemToDelete);
+            if (error) throw error;
+            showNotification("Restaurante eliminado.", "success");
+            fetchRestaurantes();
+        } catch (error) {
+            console.error("Error eliminando restaurante:", error);
+            showNotification("Hubo un error al eliminar el restaurante.", "error");
+        } finally {
+            setIsLoading(false);
+            setItemToDelete(null);
         }
     };
 
@@ -218,6 +230,20 @@ const RestaurantesAd = () => {
                                 <input style={styles.modalInput} value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} required />
                             </div>
                             <div style={styles.formGroup}>
+                                <label style={styles.label}>Rango de Precio</label>
+                                <select 
+                                    style={styles.modalInput} 
+                                    value={formData.price} 
+                                    onChange={e => setFormData({ ...formData, price: e.target.value })}
+                                    required
+                                >
+                                    <option value="$">Barato ($)</option>
+                                    <option value="$$">Moderado ($$)</option>
+                                    <option value="$$$">Caro ($$$)</option>
+                                    <option value="$$$$">Lujo ($$$$)</option>
+                                </select>
+                            </div>
+                            <div style={styles.formGroup}>
                                 <label style={styles.label}>Calificación (1-5)</label>
                                 <input type="number" step="0.1" min="1" max="5" style={styles.modalInput} value={formData.rating} onChange={e => setFormData({ ...formData, rating: e.target.value })} required />
                             </div>
@@ -235,6 +261,14 @@ const RestaurantesAd = () => {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal 
+                isOpen={!!itemToDelete} 
+                title="Eliminar Restaurante" 
+                message="¿Estás seguro de que deseas eliminar este restaurante? Esta acción no se puede deshacer."
+                onConfirm={confirmDelete} 
+                onCancel={() => setItemToDelete(null)} 
+            />
         </div>
     );
 };
@@ -253,7 +287,7 @@ const styles = {
         backgroundColor: '#f1f5f9', borderRadius: '16px', padding: '12px 20px',
         display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid #e2e8f0'
     },
-    input: { background: 'none', border: 'none', outline: 'none', width: '100%', fontSize: '15px' },
+    input: { backgroundColor: 'transparent', border: 'none', outline: 'none', flex: 1, fontSize: '15px', boxSizing: 'border-box', color: '#0f172a' },
     list: { display: 'flex', flexDirection: 'column', gap: '16px' },
     card: {
         backgroundColor: '#fff', borderRadius: '24px', padding: '16px',
@@ -285,7 +319,7 @@ const styles = {
     label: { display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#64748b' },
     modalInput: {
         width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0',
-        fontSize: '15px', outline: 'none'
+        fontSize: '15px', outline: 'none', boxSizing: 'border-box'
     },
     modalActions: { display: 'flex', gap: '12px', marginTop: '24px' },
     cancelBtn: {

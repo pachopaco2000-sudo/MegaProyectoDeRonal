@@ -1,9 +1,18 @@
-import React from 'react';
+import React, { useContext, useEffect } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { UserContext } from '../../context/UserContext';
 
 const AdminLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { profile, loading } = useContext(UserContext);
+
+    // Redirigir si no es admin
+    useEffect(() => {
+        if (!loading && profile?.rol !== 'admin') {
+            navigate('/');
+        }
+    }, [profile, loading, navigate]);
 
     const menuItems = [
         { label: 'Dashboard', icon: '📊', path: '/admin' },
@@ -14,6 +23,16 @@ const AdminLayout = () => {
         { label: 'Reservas', icon: '📅', path: '/admin/reservas' },
         { label: 'Alertas', icon: '🔔', path: '/admin/alertas' }
     ];
+
+    // Mostrar pantalla de carga o bloquear visualización hasta confirmar
+    if (loading || profile?.rol !== 'admin') {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column', color: '#64748b' }}>
+                <span style={{ fontSize: '40px', marginBottom: '15px' }}>🔒</span>
+                <h2>Verificando credenciales de administración...</h2>
+            </div>
+        );
+    }
 
     return (
         <div style={styles.container}>

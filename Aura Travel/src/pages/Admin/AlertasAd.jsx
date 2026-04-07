@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabaseClient';
+import { useNotification } from '../../context/NotificationContext';
 
 const AlertasAd = () => {
+    const { showNotification } = useNotification();
     const [alerts, setAlerts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -18,6 +20,7 @@ const AlertasAd = () => {
                 setAlerts(data || []);
             } catch (error) {
                 console.error("Error cargando alertas:", error);
+                showNotification("Hubo un error cargando las alertas.", "error");
             } finally {
                 setIsLoading(false);
             }

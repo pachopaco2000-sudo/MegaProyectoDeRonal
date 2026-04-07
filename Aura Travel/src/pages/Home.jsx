@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { UserContext } from '../context/UserContext';
 import './styles/Home.css';
 
 const Home = () => {
+    const { user } = useContext(UserContext);
     const [currentSlide, setCurrentSlide] = useState(0);
     const navigate = useNavigate();
 
@@ -85,7 +87,17 @@ const Home = () => {
                                 />
                             ))}
                         </div>
-                        <button onClick={handleSkip} className="home-skip-btn">Saltar</button>
+                        
+                        <div className="home-auth-group">
+                            {!user ? (
+                                <>
+                                    <button onClick={() => navigate('/login')} className="btn-auth login">Iniciar Sesión</button>
+                                    <button onClick={() => navigate('/login', { state: { mode: 'register' } })} className="btn-auth register">Registrarse</button>
+                                </>
+                            ) : (
+                                <button onClick={handleSkip} className="home-skip-btn">Explorar</button>
+                            )}
+                        </div>
                     </div>
 
                     <div key={currentSlide} className="slide-content home-content">

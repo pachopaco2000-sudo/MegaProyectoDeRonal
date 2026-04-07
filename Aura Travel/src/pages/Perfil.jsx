@@ -2,6 +2,8 @@ import React, { useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
 import { useNotification } from '../context/NotificationContext';
+import { supabase } from '../services/supabaseClient';
+import ConfirmModal from '../components/ConfirmModal';
 import './styles/Perfil.css';
 
 const Perfil = () => {
@@ -9,14 +11,22 @@ const Perfil = () => {
     const { showNotification } = useNotification();
     const navigate = useNavigate();
 
+    const userName = profile?.nombre || user?.user_metadata?.nombre || 'Viajero';
+    const userEmail = profile?.correo || user?.email || 'No disponible';
+
     // Estados de configuración
+    const [name, setName] = useState(userName);
     const [idioma, setIdioma] = useState(profile?.idioma || 'es');
     const [moneda, setMoneda] = useState(profile?.moneda || 'EUR');
     const [presupuesto, setPresupuesto] = useState(profile?.presupuesto || 'Media');
     const [saving, setSaving] = useState(false);
+    
+    // Estados para Aura Confirm
+    const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
     useEffect(() => {
         if (profile) {
+            setName(profile.nombre || userName);
             setIdioma(profile.idioma || 'es');
             setMoneda(profile.moneda || 'EUR');
             setPresupuesto(profile.presupuesto || 'Media');
@@ -24,27 +34,31 @@ const Perfil = () => {
     }, [profile]);
 
     const handleBorradoSeguro = async () => {
-        // RF-18: Borrado Seguro de Datos
-        if(window.confirm('⚠️ ADVERTENCIA: Esta acción eliminará permanentemente todos tus datos, preferencias e itinerarios de forma irrecuperable. ¿Deseas proceder con el borrado en profundidad?')) {
-            setSaving(true);
-            try {
-                // Se invocaría un RPC en un backend real. Esto simula el borrado de referencias.
-                await supabase.from('Reservas').delete().eq('correo_usuario', user.email);
-                showNotification("Tus datos han sido sobreescritos y eliminados del nodo central.", "success");
-                await logout();
-                navigate('/login');
-            } catch (error) {
-                console.error(error);
-                showNotification("Error en borrado seguro.", "error");
-            } finally {
-                setSaving(false);
+        setConfirmConfig({
+            isOpen: true,
+            title: "¿Borrado en profundidad?",
+            message: "⚠️ ADVERTENCIA: Esta acción eliminará permanentemente todos tus datos, preferencias e itinerarios. No hay vuelta atrás.",
+            confirmText: "Borrar Todo",
+            onConfirm: async () => {
+                setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+                setSaving(true);
+                try {
+                    await supabase.from('Reservas').delete().eq('correo_usuario', user.email);
+                    showNotification("Tus datos han sido eliminados del nodo central.", "success");
+                    executeLogout(); // Función auxiliar para limpiar y salir
+                } catch (error) {
+                    console.error(error);
+                    showNotification("Error en borrado seguro.", "error");
+                } finally {
+                    setSaving(false);
+                }
             }
-        }
+        });
     };
 
     const handleSave = async () => {
         setSaving(true);
-        const { error, success } = await updateProfile({ idioma, moneda, presupuesto });
+        const { error, success } = await updateProfile({ nombre: name, idioma, moneda, presupuesto });
         setSaving(false);
         if (success) {
             showNotification("¡Preferencias guardadas con éxito!", "success");
@@ -53,28 +67,89 @@ const Perfil = () => {
         }
     };
 
-    const handleLogout = async () => {
-        await logout();
-        navigate('/login');
+    const executeLogout = () => {
+        logout().catch(e => console.error("Logout asíncrono falló:", e));
+        localStorage.clear(); 
+        sessionStorage.clear();
+        window.location.href = '/';
     };
 
-    const userName = profile?.nombre || user?.user_metadata?.name || 'Viajero';
-    const userEmail = user?.email || 'No disponible';
+    const handleLogout = () => {
+        setConfirmConfig({
+            isOpen: true,
+            title: "¿Ya te vas?",
+            message: "Te estaremos esperando para tu próxima gran aventura en Aura Travel. ¡Vuelve pronto!",
+            confirmText: "Cerrar Sesión",
+            type: "primary",
+            onConfirm: () => {
+                setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+                executeLogout();
+            }
+        });
+    };
 
     return (
         <div className="anim-fade" style={{ paddingBottom: '30px' }}>
-            <div className="perfil-header">
-                <img src={`https://ui-avatars.com/api/?name=${userName}&background=random`} alt="Avatar" className="perfil-avatar" />
-                <h2 style={{ margin: '10px 0 5px' }}>{userName}</h2>
+            <ConfirmModal 
+                isOpen={confirmConfig.isOpen}
+                title={confirmConfig.title}
+                message={confirmConfig.message}
+                confirmText={confirmConfig.confirmText}
+                type={confirmConfig.type || 'danger'}
+                onConfirm={confirmConfig.onConfirm}
+                onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+            />
+            <div className="perfil-header" style={{ position: 'relative' }}>
+                <button 
+                    onClick={handleLogout} 
+                    style={{ position: 'absolute', top: '15px', right: '15px', background: '#dc2626', color: 'white', border: '1px solid #b91c1c', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', zIndex: 99999, transition: 'all 0.3s ease' }}
+                >
+                    🚪 Cerrar Sesión
+                </button>
+                <img src={`https://ui-avatars.com/api/?name=${name}&background=random`} alt="Avatar" className="perfil-avatar" />
+                <h2 style={{ margin: '10px 0 5px' }}>{name}</h2>
                 <p style={{ margin: 0, opacity: 0.8 }}>{userEmail}</p>
-                <span className="perfil-user-badge">{profile?.rol || 'Explorador'}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
+                    <span className="perfil-user-badge">{profile?.rol || 'Explorador'}</span>
+                    
+                    {profile?.rol === 'admin' && (
+                        <button 
+                            onClick={() => navigate('/admin')}
+                            style={{ background: '#0f172a', color: 'white', border: '1px solid #334155', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', transition: 'all 0.2s' }}
+                        >
+                            <span>⚙️</span> Ir al Panel de Administración
+                        </button>
+                    )}
+                </div>
             </div>
             
             <div style={{ padding: '20px' }}>
                 <div className="perfil-section">
                     <h4>👤 Información Personal</h4>
-                    <div className="perfil-item">Nombre en BD: {profile?.nombre || userName}</div>
-                    <div className="perfil-item">Contraseña: ****** (Verificada por Supabase)</div>
+                    <div className="perfil-form-group">
+                        <label className="perfil-label">Nombre Completo</label>
+                        <input 
+                            type="text" 
+                            className="perfil-select" 
+                            value={name} 
+                            onChange={e => setName(e.target.value)}
+                            style={{ 
+                                width: '100%', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', marginBottom: '15px'
+                            }}
+                            placeholder="Tu nombre público"
+                        />
+                        <label className="perfil-label">Correo Electrónico (Registrado en BD)</label>
+                        <input 
+                            type="email" 
+                            className="perfil-select" 
+                            value={userEmail} 
+                            disabled
+                            style={{ 
+                                width: '100%', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', backgroundColor: '#f8fafc', color: '#94a3b8'
+                            }}
+                            title="Por seguridad, el correo solo puede cambiarse desde soporte técnico."
+                        />
+                    </div>
                 </div>
 
                 <div className="perfil-section">
@@ -125,8 +200,6 @@ const Perfil = () => {
                         {saving ? 'Purgando sistema...' : 'Borrado Seguro (Eliminar Mi Cuenta)'}
                     </button>
                 </div>
-
-                <button onClick={handleLogout} className="perfil-logout-btn" style={{ marginTop: '20px' }}>Cerrar Sesión</button>
             </div>
         </div>
     );
