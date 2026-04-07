@@ -1,48 +1,324 @@
-.itinerario-banner { background: linear-gradient(135deg, #6366f1, #a855f7); padding: 40px 20px 80px; color: #fff; }
-.itinerario-card { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 20px; margin-top: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); }
-.itinerario-share-btn { width: 100%; padding: 15px; border-radius: 15px; border: none; background: #6366f1; color: #fff; font-weight: bold; margin-top: -40px; box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3); }
-.itinerario-timeline { margin-top: 30px; }
-.itinerario-day { display: flex; gap: 15px; align-items: center; padding: 15px; background: #fff; border-radius: 15px; margin-bottom: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
-.itinerario-dot { width: 30px; height: 30px; background: #6366f1; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+/* === AURA ITINERARY CSS (Overhaul) === */
+.itinerario-banner {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.9), rgba(167, 139, 250, 0.9));
+    padding: 50px 24px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
 
-/* MODAL DE CREACIÓN MANUAL */
-.itinerario-modal-overlay {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px);
-    z-index: 1000; display: flex; justify-content: center; align-items: center;
-    padding: 20px; animation: fadeIn 0.3s ease-out;
-}
-.itinerario-modal {
-    background: #ffffff; width: 100%; max-width: 500px;
-    border-radius: 24px; padding: 32px; box-shadow: 0 25px 60px rgba(0,0,0,0.2);
-    position: relative; max-height: 90vh; overflow-y: auto;
-    margin: auto; /* Prevent top cutoff in some flex layouts */
-}
-.itinerario-modal-title { font-size: 24px; font-weight: 800; margin-bottom: 24px; color: #0f172a; margin-top: 0; }
-.itinerario-form-group { margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; }
-.itinerario-label { font-size: 14px; font-weight: 600; color: #334155; }
-.itinerario-input {
-    padding: 12px 16px; border-radius: 12px; border: 1px solid #cbd5e1;
-    outline: none; font-family: inherit; font-size: 15px; background: #f8fafc; transition: border-color 0.2s; color: #0f172a;
-}
-.itinerario-input:focus { border-color: #6366f1; }
-.itinerario-btn-submit {
-    width: 100%; background: #0f172a; color: white; border: none; borderRadius: 12px; padding: 16px;
-    font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 12px; transition: transform 0.2s;
-    margin-top: 16px;
-}
-.itinerario-btn-submit:hover { transform: translateY(-2px); }
-.itinerario-fab {
-    position: fixed; bottom: 100px; right: 30px; width: 60px; height: 60px;
-    background: #6366f1; color: white; border-radius: 30px; display: flex;
-    justify-content: center; align-items: center; font-size: 30px; box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
-    cursor: pointer; z-index: 100; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-.itinerario-fab:hover { transform: scale(1.1); }
 .itinerario-tab-headers {
-    display: flex; gap: 20px; border-bottom: 1px solid #e2e8f0; margin-bottom: 20px;
+    display: flex;
+    background: #f1f5f9;
+    padding: 6px;
+    border-radius: 16px;
+    margin-bottom: 30px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
 }
+
 .itinerario-tab-head {
-    padding: 10px 0; cursor: pointer; font-weight: 700; color: #94a3b8; border-bottom: 3px solid transparent; transition: all 0.2s;
+    flex: 1;
+    text-align: center;
+    padding: 12px;
+    border-radius: 12px;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
-.itinerario-tab-head.active { color: #6366f1; border-bottom-color: #6366f1; }
+
+.itinerario-tab-head.active {
+    background: white;
+    color: #4f46e5;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+/* === TRAVEL TICKET DESIGN === */
+.ticket-wrapper {
+    margin-bottom: 30px;
+    perspective: 1000px;
+    position: relative;
+}
+
+.ticket-main {
+    background: white;
+    border-radius: 20px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    border: 1px solid #e2e8f0;
+    position: relative;
+    overflow: hidden;
+}
+
+.ticket-main::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: -10px;
+    width: 20px;
+    height: 20px;
+    background: #f8fafc;
+    border-radius: 50%;
+    transform: translateY(-50%);
+    box-shadow: inset -1px 0 0 #e2e8f0;
+}
+
+.ticket-main::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -10px;
+    width: 20px;
+    height: 20px;
+    background: #f8fafc;
+    border-radius: 50%;
+    transform: translateY(-50%);
+    box-shadow: inset 1px 0 0 #e2e8f0;
+}
+
+.ticket-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px dashed #cbd5e1;
+    padding-bottom: 15px;
+}
+
+.ticket-dest-title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 900;
+    color: #0f172a;
+}
+
+.ticket-status {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+.ticket-status.confirmada { background: #dcfce7; color: #166534; }
+.ticket-status.cancelada { background: #fee2e2; color: #991b1b; }
+.ticket-status.pendiente { background: #fef9c3; color: #854d0e; }
+.ticket-status.plan { background: #f3e8ff; color: #7e22ce; }
+
+.ticket-body {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding-top: 10px;
+}
+
+.ticket-info-block {
+    display: flex;
+    flex-direction: column;
+}
+
+.ticket-info-label {
+    font-size: 11px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.ticket-info-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.ticket-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.ticket-expand-btn {
+    background: #f1f5f9;
+    color: #4f46e5;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.2s;
+}
+
+.ticket-expand-btn:hover { background: #e2e8f0; }
+
+/* === DAY BY DAY TIMELINE === */
+.itinerary-details-panel {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-top: none;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+    padding: 24px;
+    margin-top: -15px; /* Overlap with the ticket bottom */
+    padding-top: 35px;
+    box-shadow: inset 0 8px 10px -10px rgba(0,0,0,0.1);
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.day-timeline {
+    position: relative;
+    padding-left: 20px;
+    margin-bottom: 20px;
+    border-left: 2px dashed #cbd5e1;
+}
+
+.day-timeline-node {
+    position: absolute;
+    left: -11px;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border: 3px solid #6366f1;
+    border-radius: 50%;
+}
+
+.day-header {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    color: #0f172a;
+    font-weight: 800;
+}
+
+.day-activity-card {
+    background: white;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.day-activity-icon {
+    font-size: 20px;
+    background: #e0e7ff;
+    padding: 8px;
+    border-radius: 8px;
+}
+
+.day-activity-info h5 {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    color: #1e293b;
+}
+
+.day-activity-info p {
+    margin: 0;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.itinerario-fab {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 30px;
+    box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 100;
+}
+
+.itinerario-fab:hover {
+    transform: scale(1.1) rotate(90deg);
+}
+
+.itinerario-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.itinerario-modal {
+    background: white;
+    padding: 30px;
+    border-radius: 30px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+    animation: scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes scaleUp {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.itinerario-modal-title {
+    margin: 0 0 20px 0;
+    font-size: 24px;
+    font-weight: 800;
+}
+
+.itinerario-form-group {
+    margin-bottom: 16px;
+}
+
+.itinerario-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #475569;
+}
+
+.itinerario-input {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    font-size: 15px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.itinerario-input:focus {
+    border-color: #6366f1;
+}
+
+.itinerario-btn-submit {
+    width: 100%;
+    padding: 14px;
+    background: #0f172a;
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-weight: 800;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 10px;
+}

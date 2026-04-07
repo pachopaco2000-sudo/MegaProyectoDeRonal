@@ -24,6 +24,16 @@ const Perfil = () => {
     // Estados para Aura Confirm
     const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
+    // Estados para Seguridad (Password)
+    const [currentPass, setCurrentPass] = useState('');
+    const [newPass, setNewPass] = useState('');
+    const [confirmPass, setConfirmPass] = useState('');
+    const [passwordSaving, setPasswordSaving] = useState(false);
+
+    // Estados para Favoritos
+    const [favDestinos, setFavDestinos] = useState([]);
+    const [loadingFavs, setLoadingFavs] = useState(false);
+
     useEffect(() => {
         if (profile) {
             setName(profile.nombre || userName);
@@ -31,7 +41,79 @@ const Perfil = () => {
             setMoneda(profile.moneda || 'EUR');
             setPresupuesto(profile.presupuesto || 'Media');
         }
-    }, [profile]);
+        
+        // Cargar favoritos al abrir el perfil
+        if (user) {
+            const fetchFavs = async () => {
+                setLoadingFavs(true);
+                try {
+                    const localFavsIDs = JSON.parse(localStorage.getItem(`aura_favs_${user.id}`)) || [];
+                    if (localFavsIDs.length > 0) {
+                        const { data, error } = await supabase
+                            .from('Destino')
+                            .select('*')
+                            .in('id', localFavsIDs);
+                        if (!error && data) {
+                            setFavDestinos(data);
+                        }
+                    } else {
+                        setFavDestinos([]);
+                    }
+                } catch (error) {
+                    console.error("Error cargando favoritos:", error);
+                } finally {
+                    setLoadingFavs(false);
+                }
+            };
+            fetchFavs();
+        }
+    }, [profile, user]);
+
+    const removeFavorite = (id) => {
+        const localFavsIDs = JSON.parse(localStorage.getItem(`aura_favs_${user.id}`)) || [];
+        const newFavs = localFavsIDs.filter(favId => favId !== id);
+        localStorage.setItem(`aura_favs_${user.id}`, JSON.stringify(newFavs));
+        setFavDestinos(prev => prev.filter(d => d.id !== id));
+        showNotification("Destino eliminado de favoritos.", "success");
+    };
+
+    const handlePasswordChange = async (e) => {
+// ... preserving existing logic
+        e.preventDefault();
+        
+        if (currentPass !== profile.contraseña) {
+            showNotification("La contraseña actual es incorrecta.", "error");
+            return;
+        }
+
+        if (newPass.length < 6) {
+            showNotification("La nueva contraseña debe tener al menos 6 caracteres.", "error");
+            return;
+        }
+
+        if (newPass !== confirmPass) {
+            showNotification("Las nuevas contraseñas no coinciden.", "error");
+            return;
+        }
+
+        setPasswordSaving(true);
+        try {
+            const { error, success } = await updateProfile({ contraseña: newPass });
+            if (success) {
+                showNotification("¡Contraseña actualizada con éxito!", "success");
+                setCurrentPass('');
+                setNewPass('');
+                setConfirmPass('');
+            } else {
+                showNotification("Error: " + error.message, "error");
+            }
+        } catch (err) {
+            showNotification("Fallo en la conexión.", "error");
+        } finally {
+            setPasswordSaving(false);
+        }
+    };
+
 
     const handleBorradoSeguro = async () => {
         setConfirmConfig({
@@ -124,6 +206,35 @@ const Perfil = () => {
             </div>
             
             <div style={{ padding: '20px' }}>
+                {/* SECCIÓN DE FAVORITOS (NUEVA) */}
+                <div className="perfil-section">
+                    <h4>❤️ Mis Destinos Favoritos</h4>
+                    {loadingFavs ? (
+                        <p style={{ color: '#64748b', fontSize: '14px' }}>Cargando tu colección...</p>
+                    ) : favDestinos.length === 0 ? (
+                        <p style={{ color: '#64748b', fontSize: '14px' }}>No has guardado ningún destino aún. ¡Ve a Explorar o al Mapa para añadir algunos!</p>
+                    ) : (
+                        <div className="perfil-fav-grid">
+                            {favDestinos.map(dest => (
+                                <div key={dest.id} className="perfil-fav-card" onClick={() => navigate(`/destinos/${dest.id}`)}>
+                                    <button 
+                                        className="perfil-fav-action"
+                                        onClick={(e) => { e.stopPropagation(); removeFavorite(dest.id); }}
+                                        title="Quitar de favoritos"
+                                    >
+                                        ✕
+                                    </button>
+                                    <img src={dest.imagen} alt={dest.nombre} className="perfil-fav-img" />
+                                    <div className="perfil-fav-info">
+                                        <h5 className="perfil-fav-title">{dest.nombre}</h5>
+                                        <p className="perfil-fav-loc">📍 {dest.pais}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
                 <div className="perfil-section">
                     <h4>👤 Información Personal</h4>
                     <div className="perfil-form-group">
@@ -189,6 +300,58 @@ const Perfil = () => {
                     >
                         {saving ? 'Guardando...' : 'Guardar Preferencias'}
                     </button>
+                </div>
+
+                <div className="perfil-section">
+                    <h4>🛡️ Seguridad</h4>
+                    <form onSubmit={handlePasswordChange}>
+                        <div className="perfil-form-group">
+                            <label className="perfil-label">Contraseña Actual</label>
+                            <input 
+                                type="password" 
+                                className="perfil-select" 
+                                value={currentPass} 
+                                onChange={e => setCurrentPass(e.target.value)}
+                                style={{ width: '100%', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', marginBottom: '10px' }}
+                                placeholder="••••••••"
+                                required
+                            />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                            <div className="perfil-form-group">
+                                <label className="perfil-label">Nueva Contraseña</label>
+                                <input 
+                                    type="password" 
+                                    className="perfil-select" 
+                                    value={newPass} 
+                                    onChange={e => setNewPass(e.target.value)}
+                                    style={{ width: '100%', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }}
+                                    placeholder="Nueva clave"
+                                    required
+                                />
+                            </div>
+                            <div className="perfil-form-group">
+                                <label className="perfil-label">Confirmar Nueva</label>
+                                <input 
+                                    type="password" 
+                                    className="perfil-select" 
+                                    value={confirmPass} 
+                                    onChange={e => setConfirmPass(e.target.value)}
+                                    style={{ width: '100%', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }}
+                                    placeholder="Confirmar"
+                                    required
+                                />
+                            </div>
+                        </div>
+                        <button 
+                            type="submit"
+                            className="perfil-save-btn" 
+                            style={{ marginTop: '15px', background: '#0f172a' }}
+                            disabled={passwordSaving}
+                        >
+                            {passwordSaving ? 'Actualizando...' : 'Actualizar Contraseña'}
+                        </button>
+                    </form>
                 </div>
 
                 <div className="perfil-section" style={{ border: '1px solid #fecdd3', backgroundColor: '#fff1f2' }}>

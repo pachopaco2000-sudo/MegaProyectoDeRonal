@@ -21,7 +21,8 @@ const AdminLayout = () => {
         { label: 'Actividades', icon: '🏄', path: '/admin/actividades' },
         { label: 'Usuarios', icon: '👥', path: '/admin/usuarios' },
         { label: 'Reservas', icon: '📅', path: '/admin/reservas' },
-        { label: 'Alertas', icon: '🔔', path: '/admin/alertas' }
+        { label: 'Alertas', icon: '🔔', path: '/admin/alertas' },
+        { label: 'Reportes', icon: '📄', path: '/admin/reportes' }
     ];
 
     // Mostrar pantalla de carga o bloquear visualización hasta confirmar

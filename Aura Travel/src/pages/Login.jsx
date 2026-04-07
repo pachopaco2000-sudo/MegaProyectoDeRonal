@@ -17,14 +17,28 @@ const Login = () => {
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
 
-    // Validación simple
+    // Funciones de validación
+    const validateName = (val) => /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/.test(val);
+    const validateEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+
     const isFormValid = mode === 'login'
-        ? email.includes('@') && password.length > 5
-        : name.length > 2 && email.includes('@') && password.length > 5;
+        ? validateEmail(email) && password.length >= 6
+        : name.length >= 3 && validateName(name) && validateEmail(email) && password.length >= 6;
+
+    const handleNamesChange = (e) => {
+        const value = e.target.value;
+        if (validateName(value)) {
+            setName(value);
+        }
+    };
 
     const handleSubmit = async () => {
         if (!isFormValid) {
-            showNotification("Rellena los campos correctamente (Contraseña min. 6)", "error");
+            let msg = "Rellena los campos correctamente. ";
+            if (mode === 'register' && name.length < 3) msg += "Nombre muy corto. ";
+            if (!validateEmail(email)) msg += "Email inválido. ";
+            if (password.length < 6) msg += "Contraseña min. 6 caracteres. ";
+            showNotification(msg, "error");
             return;
         }
         try {
@@ -70,7 +84,15 @@ const Login = () => {
                     </div>
 
                     <div>
-                        {mode === 'register' && <input type="text" className="login-input" placeholder="Nombre completo" value={name} onChange={(e) => setName(e.target.value)} />}
+                        {mode === 'register' && (
+                            <input 
+                                type="text" 
+                                className="login-input" 
+                                placeholder="Nombre completo (Solo letras)" 
+                                value={name} 
+                                onChange={handleNamesChange} 
+                            />
+                        )}
                         <input type="email" className="login-input" placeholder="Correo electrónico" value={email} onChange={(e) => setEmail(e.target.value)} />
                         {mode !== 'recover' && <input type="password" className="login-input" placeholder="Contraseña (min. 6)" value={password} onChange={(e) => setPassword(e.target.value)} />}
                     </div>

@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabaseClient';
 import './styles/Explorar.css';
+import { calculateDistance } from '../services/geoUtils';
+import { useNotification } from '../context/NotificationContext';
 
 const Explorar = () => {
+    const { showNotification } = useNotification();
     const [destinos, setDestinos] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [userLoc, setUserLoc] = useState(null);
     
     // Filtros avanzados
     const [showFilters, setShowFilters] = useState(false);
@@ -26,6 +30,7 @@ const Explorar = () => {
                     .order('rating', { ascending: false });
                 
                 if (error) throw error;
+                // Inicialmente, sin distancia
                 setDestinos(data || []);
             } catch (error) {
                 console.error("Error cargando destinos en Explorar:", error);
@@ -39,19 +44,32 @@ const Explorar = () => {
 
     const handleGeolocation = () => {
         if ("geolocation" in navigator) {
+            showNotification("🚀 Buscando destinos cerca de ti...", "success");
             navigator.geolocation.getCurrentPosition((position) => {
-                // RF-12: Uso de GPS sin transmitir datos exactos al servidor backend central
-                setSearchTerm('Europa'); // Mock heurístico
-                alert(`Coordenadas ubicadas: Lat ${position.coords.latitude.toFixed(2)}, Lon ${position.coords.longitude.toFixed(2)}.\nFiltro de zona aplicado.`);
+                const { latitude, longitude } = position.coords;
+                setUserLoc({ lat: latitude, lng: longitude });
+
+                // Calcular distancias y reordenar
+                const sorted = [...destinos].map(d => ({
+                    ...d,
+                    distancia: calculateDistance(latitude, longitude, d.latitud, d.longitud)
+                })).sort((a, b) => {
+                    const distA = a.distancia === Infinity ? 999999 : a.distancia;
+                    const distB = b.distancia === Infinity ? 999999 : b.distancia;
+                    return distA - distB;
+                });
+
+                setDestinos(sorted);
+                showNotification("🎯 Lista de destinos actualizada por proximidad.", "success");
             }, () => {
-                alert("Habilita el GPS del navegador para descubrir destinos cerca de ti.");
+                showNotification("📍 Por favor, habilita el GPS para esta función.", "error");
             });
         }
     };
 
     const filteredResultados = destinos.filter(res => {
         const matchesSearch = (res.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              (res.pais || '').toLowerCase().includes(searchTerm.toLowerCase());
+                               (res.pais || '').toLowerCase().includes(searchTerm.toLowerCase());
         
         const matchesRating = filterRating === 0 || (res.rating && res.rating >= filterRating);
         // Algunos climas son "Soleado", "Tropical", etc. Un match parcial sirve.
@@ -68,126 +86,194 @@ const Explorar = () => {
     };
 
     return (
-        <div className="explorar-page anim-fade">
-            <header className="explorar-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '15px' }}>
-                <h1 className="explorar-title">Explorar Destinos</h1>
-                <div style={{ width: '100%', display: 'flex', gap: '10px' }}>
-                    <input 
-                        type="text" 
-                        placeholder="Buscar por ciudad o país..." 
-                        style={{
-                            flex: 1,
-                            padding: '12px 20px',
-                            borderRadius: '16px',
-                            border: '1px solid #e2e8f0',
-                            backgroundColor: '#f1f5f9',
-                            outline: 'none',
-                            fontSize: '15px'
-                        }}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                    <button onClick={() => setShowFilters(!showFilters)} style={{ background: showFilters ? '#6366f1' : '#fff', color: showFilters ? 'white' : '#64748b', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '0 20px', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s' }}>
-                        ⚙️ Filtros
-                    </button>
-                    <button onClick={handleGeolocation} style={{ background: '#10b981', color: 'white', border: 'none', borderRadius: '16px', padding: '0 20px', cursor: 'pointer', fontSize: '20px' }} title="Buscar cerca de mí (GPS)">
-                        📍
-                    </button>
-                </div>
+        <div className="explorar-page">
+            {/* BACKGROUND DECORATION */}
+            <div className="aura-bg-container">
+                <div className="aura-blob"></div>
+                <div className="aura-blob"></div>
+            </div>
 
-                {/* ADVANCED FILTERS PANEL */}
-                {showFilters && (
-                    <div className="explorar-advanced-panel">
-                        <div className="filter-group">
-                            <div className="filter-group-title">Clasificación Mínima</div>
-                            <div className="filter-options">
-                                <div className={`filter-option ${filterRating === 0 ? 'selected' : ''}`} onClick={() => setFilterRating(0)}>Cualquiera</div>
-                                <div className={`filter-option ${filterRating === 4.0 ? 'selected' : ''}`} onClick={() => setFilterRating(4.0)}>4.0+ ⭐</div>
-                                <div className={`filter-option ${filterRating === 4.5 ? 'selected' : ''}`} onClick={() => setFilterRating(4.5)}>4.5+ ⭐</div>
-                                <div className={`filter-option ${filterRating === 4.8 ? 'selected' : ''}`} onClick={() => setFilterRating(4.8)}>4.8+ ⭐ (Élite)</div>
+            <div className="explorar-content-wrapper">
+                <header className="explorar-header">
+                    <h1 className="explorar-title">Explorar Destinos</h1>
+                    
+                    <div className="explorar-search-group">
+                        <input 
+                            type="text" 
+                            className="explorar-search-input-fancy"
+                            placeholder="Buscar por ciudad o país..." 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        <button 
+                            className={`explorar-icon-btn btn-filters ${showFilters ? 'active' : ''}`}
+                            onClick={() => setShowFilters(!showFilters)}
+                            title="Filtros Avanzados"
+                        >
+                            {showFilters ? '✕' : '⚙️'}
+                        </button>
+                        <button 
+                            className="explorar-icon-btn btn-gps"
+                            onClick={handleGeolocation} 
+                            title="Destinos cerca de mí (GPS)"
+                        >
+                            📍
+                        </button>
+                    </div>
+
+                    {/* ADVANCED FILTERS PANEL */}
+                    {showFilters && (
+                        <div className="explorar-advanced-panel">
+                            <div className="filter-group">
+                                <div className="filter-group-title">Clasificación Mínima</div>
+                                <div>
+                                    {[0, 4.0, 4.5, 4.8].map(r => (
+                                        <div 
+                                            key={r}
+                                            className={`fancy-option ${filterRating === r ? 'selected' : ''}`} 
+                                            onClick={() => setFilterRating(r)}
+                                        >
+                                            {r === 0 ? 'Cualquiera' : `${r}+ ⭐`}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
 
-                        <div className="filter-group">
-                            <div className="filter-group-title">Tipo de Clima</div>
-                            <div className="filter-options">
-                                <div className={`filter-option ${filterClima === null ? 'selected' : ''}`} onClick={() => setFilterClima(null)}>Explorar Todos</div>
-                                <div className={`filter-option ${filterClima === 'Soleado' ? 'selected' : ''}`} onClick={() => setFilterClima('Soleado')}>☀️ Soleado</div>
-                                <div className={`filter-option ${filterClima === 'Frio' ? 'selected' : ''}`} onClick={() => setFilterClima('Frio')}>❄️ Frío / Nieve</div>
-                                <div className={`filter-option ${filterClima === 'Tropical' ? 'selected' : ''}`} onClick={() => setFilterClima('Tropical')}>🌴 Tropical</div>
+                            <div className="filter-group">
+                                <div className="filter-group-title">Tipo de Clima</div>
+                                <div>
+                                    {['Explorar Todos', 'Soleado', 'Frio', 'Tropical'].map(c => {
+                                        const val = c === 'Explorar Todos' ? null : c;
+                                        return (
+                                            <div 
+                                                key={c}
+                                                className={`fancy-option ${filterClima === val ? 'selected' : ''}`} 
+                                                onClick={() => setFilterClima(val)}
+                                            >
+                                                {c === 'Explorar Todos' ? 'Todos' : c === 'Soleado' ? '☀️ Soleado' : c === 'Frio' ? '❄️ Frío' : '🌴 Tropical'}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
 
-                        <div className="filter-group">
-                            <div className="filter-group-title">Precio Máximo (€)</div>
-                            <div className="filter-options" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div className="filter-group">
+                                <div className="filter-group-title">Precio Máximo (€)</div>
                                 <input 
                                     type="number" 
+                                    className="fancy-input"
                                     placeholder="Ej: 1500" 
                                     value={filterMaxPrecio}
                                     onChange={(e) => setFilterMaxPrecio(e.target.value)}
-                                    style={{
-                                        padding: '10px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%', outline: 'none'
-                                    }}
                                 />
-                                <span style={{ fontSize: '12px', color: '#64748b' }}>Filtra destinos por debajo de este límite.</span>
                             </div>
+
+                            {(filterRating !== 0 || filterClima !== null || filterMaxPrecio !== '') && (
+                                <div style={{ gridColumn: '1 / -1', textAlign: 'right' }}>
+                                    <button onClick={removeFilters} style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}>
+                                        ✖ Limpiar Filtros
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </header>
+
+                <div className="explorar-main-layout">
+                    {/* LEFT SIDE: SEARCH RESULTS */}
+                    <div className="explorar-results-side">
+                        <div className="explorar-results-count">
+                            {isLoading ? 'Buscando destinos de ensueño...' : `${filteredResultados.length} joyas encontradas`}
+                        </div>
+                        <div className="explorar-grid">
+                            {filteredResultados.map((res, index) => (
+                                <div 
+                                    key={res.id} 
+                                    className="explorar-card" 
+                                    style={{ animationDelay: `${index * 0.1}s` }}
+                                    onClick={() => navigate(`/destinos/${res.id}`)}
+                                >
+                                    <div className="explorar-img-wrapper">
+                                        <div className="explorar-rating-chip">⭐ {res.rating || 4.5}</div>
+                                        {res.distancia && res.distancia < 20000 && (
+                                            <div className="explorar-rating-chip" style={{ left: '20px', right: 'auto', background: '#10b981', color: 'white' }}>
+                                                📍 {res.distancia.toFixed(0)} km
+                                            </div>
+                                        )}
+                                        <img src={res.imagen || 'https://via.placeholder.com/600'} alt={res.nombre} className="explorar-card-img" />
+                                        <div className="explorar-img-overlay"></div>
+                                    </div>
+
+                                    <div className="explorar-info-body">
+                                        <h3 className="explorar-dest-name">{res.nombre}</h3>
+                                        <div className="explorar-dest-loc">📍 {res.pais}</div>
+                                        
+                                        <div className="explorar-badge-row">
+                                            <span className="aura-chip primary">{res.categoria || "Destino Turístico"}</span>
+                                            {res.distancia && res.distancia < 500 && <span className="aura-chip" style={{ background: '#ecfdf5', color: '#059669' }}>✨ Aventura Próxima</span>}
+                                        </div>
+
+                                        <div className="explorar-price-footer">
+                                            <div>
+                                                <span className="price-label">Desde</span>
+                                                <div className="price-value">€{res.precio || 0}</div>
+                                            </div>
+                                            <button className="aura-chip primary" style={{ cursor: 'pointer', border: 'none' }}>Explorar →</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
 
-                        {(filterRating !== 0 || filterClima !== null || filterMaxPrecio !== '') && (
-                            <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
-                                <button onClick={removeFilters} style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer' }}>
-                                    ✖ Limpiar Filtros
-                                </button>
+
+                        {!isLoading && filteredResultados.length === 0 && (
+                            <div style={{ textAlign: 'center', color: '#64748b', marginTop: '80px', background: 'white', padding: '40px', borderRadius: '32px', boxShadow: '0 10px 30px rgba(0,0,0,0.02)' }}>
+                                <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
+                                <h3>No encontramos destinos</h3>
+                                <p>Intenta ajustar tus filtros para descubrir nuevas aventuras.</p>
                             </div>
                         )}
                     </div>
-                )}
-            </header>
 
-            <p className="explorar-results-count">
-                {isLoading ? 'Buscando destinos...' : `${filteredResultados.length} destinos encontrados`}
-            </p>
-
-            <div className="explorar-grid">
-                {filteredResultados.map(res => (
-                    <div 
-                        key={res.id} 
-                        className="explorar-card" 
-                        onClick={() => navigate(`/destinos/${res.id}`)}
-                        style={{ cursor: 'pointer' }}
-                    >
-                        <div className="explorar-img-badge">⭐ {res.rating || 4.5}</div>
-                        <div className="explorar-card-img-container">
-                            <img src={res.imagen || 'https://via.placeholder.com/600'} alt={res.nombre} className="explorar-card-img" />
+                    {/* RIGHT SIDE: SIDEBAR (Only visible on Desktop) */}
+                    <aside className="explorar-sidebar">
+                        <div className="sidebar-title-group">
+                            <div className="sidebar-ai-badge">✨</div>
+                            <span className="sidebar-label">Aura AI Recomienda</span>
                         </div>
-                        <div className="explorar-card-info">
-                            <h3 className="explorar-card-title">{res.nombre}</h3>
-                            <p className="explorar-card-subtitle" style={{marginBottom: '6px'}}>📍 {res.pais}</p>
-                            
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                                <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>Categoría: <strong>{res.categoria || "Destino Turístico"}</strong></span>
-                            </div>
+                        
+                        <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '10px' }}>
+                            Basado en tendencias globales y tus búsquedas recientes.
+                        </p>
 
-                            <div className="explorar-tag-grid" style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div>
-                                    {res.clima && <span className="explorar-tag">🌤️ {res.clima}</span>}
+                        {/* Recomendaciones Rápidas */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {destinos.slice(0, 3).map(fav => (
+                                <div 
+                                    key={`side-${fav.id}`} 
+                                    className="sidebar-card"
+                                    onClick={() => navigate(`/destinos/${fav.id}`)}
+                                >
+                                    <img src={fav.imagen} alt={fav.nombre} className="sidebar-card-img" />
+                                    <div className="sidebar-card-info">
+                                        <h4 className="sidebar-card-name">{fav.nombre}</h4>
+                                        <span className="sidebar-card-loc">{fav.pais}</span>
+                                    </div>
                                 </div>
-                                <div style={{ textAlign: 'right' }}>
-                                    <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '-2px' }}>Precio Base</span>
-                                    <span style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>€{res.precio || 0}</span>
-                                </div>
-                            </div>
+                            ))}
                         </div>
-                    </div>
-                ))}
-            </div>
-            
-            {!isLoading && filteredResultados.length === 0 && (
-                <div style={{ textAlign: 'center', color: '#64748b', marginTop: '40px' }}>
-                    No encontramos destinos que coincidan con tu búsqueda.
+
+                        {/* Banner Promocional */}
+                        <div className="sidebar-promo-banner">
+                            <h3 className="promo-title">Club Elite Aura</h3>
+                            <p className="promo-desc">
+                                Únete para obtener acceso a destinos secretos y descuentos exclusivos.
+                            </p>
+                            <button className="promo-btn" onClick={() => navigate('/login')}>Saber más</button>
+                        </div>
+                    </aside>
                 </div>
-            )}
+            </div>
         </div>
     );
 };
