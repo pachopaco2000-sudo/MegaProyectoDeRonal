@@ -88,8 +88,20 @@ const DestinoDetalle = () => {
     };
 
     const confirmReservation = async () => {
+        const today = new Date().toISOString().split('T')[0];
+
         if (!checkoutData.fechaInicio || !checkoutData.fechaFin) {
             showNotification("Por favor selecciona las fechas completas de tu viaje.", "error");
+            return;
+        }
+
+        if (checkoutData.fechaInicio < today) {
+            showNotification("No puedes reservar una fecha en el pasado. Selecciona hoy o un día futuro.", "error");
+            return;
+        }
+
+        if (checkoutData.fechaFin < checkoutData.fechaInicio) {
+            showNotification("La fecha de regreso no puede ser anterior a la de salida.", "error");
             return;
         }
 
@@ -101,8 +113,6 @@ const DestinoDetalle = () => {
                 imagen: destino.imagen,
                 correo_usuario: user.correo,
                 personas: parseInt(checkoutData.personas) || 1,
-                // Si la base de datos permite guardar fechas, se envían aquí, de lo contrario se ignoran silenciosamente por la API Rest si no existen,
-                // Pero como verificamos antes, la base de datos sí soporta fechaInicio y fechaFin.
                 fechaInicio: checkoutData.fechaInicio,
                 fechaFin: checkoutData.fechaFin
             };
@@ -458,11 +468,23 @@ const DestinoDetalle = () => {
                         <div style={{ display: 'flex', gap: '16px' }}>
                             <div className="checkout-form-group" style={{ flex: 1 }}>
                                 <label className="checkout-label">Fecha de Salida</label>
-                                <input type="date" className="checkout-input" value={checkoutData.fechaInicio} onChange={e => setCheckoutData({...checkoutData, fechaInicio: e.target.value})} />
+                                <input 
+                                    type="date" 
+                                    className="checkout-input" 
+                                    value={checkoutData.fechaInicio} 
+                                    onChange={e => setCheckoutData({...checkoutData, fechaInicio: e.target.value})} 
+                                    min={new Date().toISOString().split('T')[0]}
+                                />
                             </div>
                             <div className="checkout-form-group" style={{ flex: 1 }}>
                                 <label className="checkout-label">Fecha de Regreso</label>
-                                <input type="date" className="checkout-input" value={checkoutData.fechaFin} onChange={e => setCheckoutData({...checkoutData, fechaFin: e.target.value})} min={checkoutData.fechaInicio} />
+                                <input 
+                                    type="date" 
+                                    className="checkout-input" 
+                                    value={checkoutData.fechaFin} 
+                                    onChange={e => setCheckoutData({...checkoutData, fechaFin: e.target.value})} 
+                                    min={checkoutData.fechaInicio || new Date().toISOString().split('T')[0]} 
+                                />
                             </div>
                         </div>
 

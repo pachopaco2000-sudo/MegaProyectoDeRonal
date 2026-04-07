@@ -28,6 +28,33 @@ const botCss = `
   .chat-fab.hidden {
       opacity: 0; transform: scale(0) rotate(-180deg); pointer-events: none;
   }
+  .msg-tooltip {
+    position: absolute;
+    bottom: 75px;
+    right: 0;
+    background: white;
+    color: #0f172a;
+    padding: 10px 16px;
+    border-radius: 18px;
+    border-bottom-right-radius: 4px;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    animation: tooltipFade 0.5s ease-out forwards;
+    z-index: 100;
+    border: 1px solid rgba(0,0,0,0.05);
+  }
+  @keyframes tooltipFade {
+    from { opacity: 0; transform: translateY(10px) scale(0.9); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes tooltipOut {
+    to { opacity: 0; transform: translateY(5px) scale(0.95); }
+  }
+  .msg-tooltip.dying {
+    animation: tooltipOut 0.4s ease-in forwards;
+  }
   .msg-anim {
     animation: popInMessage 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
   }
@@ -36,8 +63,10 @@ const botCss = `
 const BotIA = () => {
     const { user, profile } = useContext(UserContext);
     const [isOpen, setIsOpen] = useState(false);
+    const [showTooltip, setShowTooltip] = useState(true);
+    const [isDying, setIsDying] = useState(false);
     const [messages, setMessages] = useState([
-        { sender: 'bot', text: '¡Hola! Soy Aura, tu IA de viajes conversacional. Cuéntame sobre ti y todo lo que quieras explorar.' }
+        { sender: 'bot', text: `¡Hola${profile?.nombre ? ' ' + profile.nombre : ''}! Soy Aura, tu asistente de viajes inteligente. ¿A qué rincón del mundo te gustaría escapar hoy?` }
     ]);
     const [inputStr, setInputStr] = useState('');
     const [isTyping, setIsTyping] = useState(false);
@@ -48,6 +77,15 @@ const BotIA = () => {
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
+
+    // Manejo del Tooltip inicial
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setIsDying(true);
+            setTimeout(() => setShowTooltip(false), 400); // Dar tiempo a la animación de salida
+        }, 4000);
+        return () => clearTimeout(timer);
+    }, []);
 
     // Carga de la "Base de Conocimiento Local"
     useEffect(() => {
@@ -73,9 +111,9 @@ const BotIA = () => {
             const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
             const promptContext = `Eres Aura AI, el asistente experto planificador de viajes de 'Aura Travel'. 
 REGLAS:
-1. Recomienda viajes de esta base de datos real: ${JSON.stringify(conocimiento)}. Usa el clima o actividades.
-2. Interfaz Técnica: "Buscar destino" se hace desde Inicio o Explorar. "Reservas" va en Itinerario. "Presupuesto/Moneda/Cerrar sesión" se hace desde Perfil.
-3. El ID de Usuario actual es: ${profile?.nombre || user?.email || 'Viajero'} | Presupuesto: ${profile?.presupuesto || 'Estándar'}.`;
+1. Recomienda viajes de esta base de datos real: ${JSON.stringify(conocimiento)}.
+2. Si el usuario no ha iniciado sesión (Invitado), anímalo a crear una cuenta en la sección "Registrarse" del Home para guardar sus itinerarios.
+3. El ID de Usuario actual es: ${profile?.nombre || user?.email || 'Aventurero Invitado'} | Presupuesto: ${profile?.presupuesto || 'No definido (Sugiere opciones variadas)'}.`;
 
             chatRef.current = model.startChat({
                 history: [
@@ -145,9 +183,16 @@ REGLAS:
             <style>{botCss}</style>
 
             {/* BOTÓN FLOTANTE */}
-            <button className={`chat-fab ${isOpen ? 'hidden' : ''}`} style={{...styles.fab, pointerEvents: isOpen ? 'none' : 'auto'}} onClick={() => setIsOpen(true)}>
-                <span>✨</span>
-            </button>
+            <div className={`chat-fab ${isOpen ? 'hidden' : ''}`} style={{ position: 'absolute', bottom: 0, right: 0 }}>
+                {showTooltip && (
+                    <div className={`msg-tooltip ${isDying ? 'dying' : ''}`}>
+                        ¡Hola! ¿Tienes alguna duda? ✨
+                    </div>
+                )}
+                <button style={{...styles.fab, pointerEvents: isOpen ? 'none' : 'auto'}} onClick={() => setIsOpen(true)}>
+                    <span>✨</span>
+                </button>
+            </div>
 
             {/* VENTANA DEL CHAT */}
             <div className={`chat-window ${isOpen ? 'open' : 'closed'}`} style={{...styles.chatWindow, pointerEvents: isOpen ? 'auto' : 'none'}}>

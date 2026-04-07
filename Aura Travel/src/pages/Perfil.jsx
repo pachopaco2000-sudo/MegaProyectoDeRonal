@@ -24,6 +24,12 @@ const Perfil = () => {
     // Estados para Aura Confirm
     const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
+    // Estados para Seguridad (Password)
+    const [currentPass, setCurrentPass] = useState('');
+    const [newPass, setNewPass] = useState('');
+    const [confirmPass, setConfirmPass] = useState('');
+    const [passwordSaving, setPasswordSaving] = useState(false);
+
     useEffect(() => {
         if (profile) {
             setName(profile.nombre || userName);
@@ -32,6 +38,43 @@ const Perfil = () => {
             setPresupuesto(profile.presupuesto || 'Media');
         }
     }, [profile]);
+
+    const handlePasswordChange = async (e) => {
+        e.preventDefault();
+        
+        if (currentPass !== profile.contraseña) {
+            showNotification("La contraseña actual es incorrecta.", "error");
+            return;
+        }
+
+        if (newPass.length < 6) {
+            showNotification("La nueva contraseña debe tener al menos 6 caracteres.", "error");
+            return;
+        }
+
+        if (newPass !== confirmPass) {
+            showNotification("Las nuevas contraseñas no coinciden.", "error");
+            return;
+        }
+
+        setPasswordSaving(true);
+        try {
+            const { error, success } = await updateProfile({ contraseña: newPass });
+            if (success) {
+                showNotification("¡Contraseña actualizada con éxito!", "success");
+                setCurrentPass('');
+                setNewPass('');
+                setConfirmPass('');
+            } else {
+                showNotification("Error: " + error.message, "error");
+            }
+        } catch (err) {
+            showNotification("Fallo en la conexión.", "error");
+        } finally {
+            setPasswordSaving(false);
+        }
+    };
+
 
     const handleBorradoSeguro = async () => {
         setConfirmConfig({
@@ -189,6 +232,58 @@ const Perfil = () => {
                     >
                         {saving ? 'Guardando...' : 'Guardar Preferencias'}
                     </button>
+                </div>
+
+                <div className="perfil-section">
+                    <h4>🛡️ Seguridad</h4>
+                    <form onSubmit={handlePasswordChange}>
+                        <div className="perfil-form-group">
+                            <label className="perfil-label">Contraseña Actual</label>
+                            <input 
+                                type="password" 
+                                className="perfil-select" 
+                                value={currentPass} 
+                                onChange={e => setCurrentPass(e.target.value)}
+                                style={{ width: '100%', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', marginBottom: '10px' }}
+                                placeholder="••••••••"
+                                required
+                            />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                            <div className="perfil-form-group">
+                                <label className="perfil-label">Nueva Contraseña</label>
+                                <input 
+                                    type="password" 
+                                    className="perfil-select" 
+                                    value={newPass} 
+                                    onChange={e => setNewPass(e.target.value)}
+                                    style={{ width: '100%', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }}
+                                    placeholder="Nueva clave"
+                                    required
+                                />
+                            </div>
+                            <div className="perfil-form-group">
+                                <label className="perfil-label">Confirmar Nueva</label>
+                                <input 
+                                    type="password" 
+                                    className="perfil-select" 
+                                    value={confirmPass} 
+                                    onChange={e => setConfirmPass(e.target.value)}
+                                    style={{ width: '100%', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }}
+                                    placeholder="Confirmar"
+                                    required
+                                />
+                            </div>
+                        </div>
+                        <button 
+                            type="submit"
+                            className="perfil-save-btn" 
+                            style={{ marginTop: '15px', background: '#0f172a' }}
+                            disabled={passwordSaving}
+                        >
+                            {passwordSaving ? 'Actualizando...' : 'Actualizar Contraseña'}
+                        </button>
+                    </form>
                 </div>
 
                 <div className="perfil-section" style={{ border: '1px solid #fecdd3', backgroundColor: '#fff1f2' }}>

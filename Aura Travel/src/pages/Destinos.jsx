@@ -168,8 +168,6 @@ const Destinos = () => {
                 </div>
             )}
 
-            {/* Módulo de Inteligencia Artificial (Solamente visible estéticamente para usuarios) */}
-            {user && <BotIA />}
         </div>
     );
 };
