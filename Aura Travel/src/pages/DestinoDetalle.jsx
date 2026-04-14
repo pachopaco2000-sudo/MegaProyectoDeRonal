@@ -3,7 +3,22 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
 import { useNotification } from '../context/NotificationContext';
 import { supabase } from '../services/supabaseClient';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
 import './styles/DestinoDetalle.css';
+
+// Fix e Iconos personalizados para Actividades/Restaurantes
+const ActivityIcon = new L.Icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+});
+
+const RestaurantIcon = new L.Icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+});
 
 const DestinoDetalle = () => {
         const { id } = useParams();
@@ -53,14 +68,14 @@ const DestinoDetalle = () => {
                 // 2. Obtener actividades del destino
                 const { data: aData } = await supabase
                     .from('Actividades')
-                    .select('nombre, precio, duracion, imagen')
+                    .select('*')
                     .eq('destino_id', id);
                 setActividades(aData || []);
 
                 // 3. Obtener restaurantes del destino
                 const { data: rData } = await supabase
                     .from('Restaurantes')
-                    .select('nombre, tipoComida, precio, rating')
+                    .select('*')
                     .eq('destino_id', id);
                 setRestaurantes(rData || []);
 
@@ -204,6 +219,41 @@ const DestinoDetalle = () => {
 
     if (!destino) return null;
 
+    // --- ALGORITMO DE COORDENADAS (Fallback & Dispersión) ---
+    // Determinamos Epicentro del Destino
+    let baseLat = parseFloat(destino.latitud);
+    let baseLng = parseFloat(destino.longitud);
+
+    if (isNaN(baseLat) || isNaN(baseLng) || (baseLat === 0 && baseLng === 0)) {
+        const cityName = (destino.ciudad || destino.nombre || '').toLowerCase();
+        if (cityName.includes('cartagena')) { baseLat = 10.3910; baseLng = -75.4794; }
+        else if (cityName.includes('paris') || cityName.includes('parís')) { baseLat = 48.8566; baseLng = 2.3522; }
+        else if (cityName.includes('roma')) { baseLat = 41.9028; baseLng = 12.4964; }
+        else if (cityName.includes('madrid')) { baseLat = 40.4168; baseLng = -3.7038; }
+        else if (cityName.includes('tokio') || cityName.includes('tokyo')) { baseLat = 35.6762; baseLng = 139.6503; }
+        else if (cityName.includes('londres') || cityName.includes('london')) { baseLat = 51.5072; baseLng = -0.1276; }
+        else {
+            let hash = 0;
+            for (let i = 0; i < cityName.length; i++) hash = cityName.charCodeAt(i) + ((hash << 5) - hash);
+            baseLat = (Math.abs(hash) % 100) - 50; 
+            baseLng = (Math.abs(hash * 3) % 360) - 180;
+        }
+    }
+    const epicentro = [baseLat, baseLng];
+
+    // Función de compensación usando Hashes para graficar aleatoriamente sin patrón circular
+    const getOffsetCoords = (itemStr, factor = 0.015) => {
+        let hash = 0;
+        for (let i = 0; i < itemStr.length; i++) hash = (hash << 5) - hash + itemStr.charCodeAt(i);
+        hash = Math.abs(hash);
+        
+        // Pseudo-random offset (-0.5 to 0.5) * factor
+        const latOffset = ((hash % 100) / 100 - 0.5) * factor; 
+        const lngOffset = (((hash >> 2) % 100) / 100 - 0.5) * factor;
+        
+        return [baseLat + latOffset, baseLng + lngOffset];
+    };
+
     return (
         <div className="detalle-container anim-fade">
             <style>{`
@@ -327,8 +377,8 @@ const DestinoDetalle = () => {
                             )}
 
                             {selectedTab === 'actividades' && (
-                                <div className="anim-fade">
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                <div className="anim-fade" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <h3 className="detalle-section-title" style={{ margin: 0 }}>Lo que no te puedes perder</h3>
                                         {actividades.length > 1 && !isRutaOptimizada && (
                                             <button onClick={handleOptimizarRuta} style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(168, 85, 247, 0.3)', transition: 'transform 0.2s' }}>
@@ -336,55 +386,109 @@ const DestinoDetalle = () => {
                                             </button>
                                         )}
                                     </div>
+                                    
                                     {actividades.length === 0 ? (
                                         <p style={{color: '#64748b'}}>No hay actividades registradas aún.</p>
                                     ) : (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                            {actividadesMostrar.map((act, i) => (
-                                                <div key={i} className="actividad-card" style={isRutaOptimizada ? { borderLeft: '4px solid #a855f7', background: '#f8fafc' } : {}}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                                        {act.imagen ? (
-                                                            <img src={act.imagen} alt={act.nombre} style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover' }} />
-                                                        ) : (
-                                                            <span style={{ fontSize: '28px' }}>✨</span>
-                                                        )}
-                                                        <div>
-                                                            <strong style={{ display: 'block', color: '#0f172a', fontSize: '16px' }}>
-                                                                {isRutaOptimizada && <span style={{ color: '#a855f7', marginRight: '8px', fontSize: '13px' }}>{horariosSugeridos[i % horariosSugeridos.length]}</span>}
-                                                                {act.nombre}
-                                                            </strong>
-                                                            <span style={{ fontSize: '13px', color: '#64748b' }}>Duración: {act.duracion}</span>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 1fr) 1fr', gap: '20px' }}>
+                                            {/* Sub-Mapa de Actividades */}
+                                            <div style={{ height: '400px', borderRadius: '20px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
+                                                <MapContainer center={epicentro} zoom={13} style={{ height: '100%', width: '100%', zIndex: 1 }}>
+                                                    <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+                                                    {actividadesMostrar.map((act, i) => {
+                                                        const pos = getOffsetCoords(act.nombre || String(i), 0.012);
+                                                        return (
+                                                            <Marker key={i} position={pos} icon={ActivityIcon}>
+                                                                <Popup closeButton={false} className="custom-popup-detalle">
+                                                                    <div style={{ padding: '8px', textAlign: 'center', minWidth: '150px' }}>
+                                                                        {act.imagen && <img src={act.imagen} alt="Miniatura" style={{width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px', marginBottom: '8px'}} />}
+                                                                        <strong style={{ fontSize: '15px', display: 'block', color: '#0f172a' }}>{act.nombre}</strong>
+                                                                        {act.type && <span style={{ fontSize: '12px', display: 'block', color: '#64748b', marginBottom: '4px' }}>{act.type}</span>}
+                                                                        <span style={{ fontSize: '14px', color: '#6366f1', fontWeight: '800' }}>€{act.precio} / {act.duracion}</span>
+                                                                    </div>
+                                                                </Popup>
+                                                            </Marker>
+                                                        )
+                                                    })}
+                                                </MapContainer>
+                                            </div>
+
+                                            {/* Listado de Actividades Scrollable */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '400px', overflowY: 'auto', paddingRight: '10px' }}>
+                                                {actividadesMostrar.map((act, i) => (
+                                                    <div key={i} className="actividad-card" style={isRutaOptimizada ? { borderLeft: '4px solid #a855f7', background: '#f8fafc' } : {}}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                            {act.imagen ? (
+                                                                <img src={act.imagen} alt={act.nombre} style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover' }} />
+                                                            ) : (
+                                                                <span style={{ fontSize: '28px' }}>✨</span>
+                                                            )}
+                                                            <div>
+                                                                <strong style={{ display: 'block', color: '#0f172a', fontSize: '16px' }}>
+                                                                    {isRutaOptimizada && <span style={{ color: '#a855f7', marginRight: '8px', fontSize: '13px' }}>{horariosSugeridos[i % horariosSugeridos.length]}</span>}
+                                                                    {act.nombre}
+                                                                </strong>
+                                                                <span style={{ fontSize: '13px', color: '#64748b' }}>Duración: {act.duracion}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                            <span style={{ color: '#14b8a6', fontWeight: '800', fontSize: '18px' }}>€{act.precio}</span>
                                                         </div>
                                                     </div>
-                                                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                        <span style={{ color: '#14b8a6', fontWeight: '800', fontSize: '18px' }}>€{act.precio}</span>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
                             )}
 
                             {selectedTab === 'restaurantes' && (
-                                <div className="anim-fade">
+                                <div className="anim-fade" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                     <h3 className="detalle-section-title">Dónde comer</h3>
                                     {restaurantes.length === 0 ? (
                                         <p style={{color: '#64748b'}}>No hay restaurantes registrados aún.</p>
                                     ) : (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                            {restaurantes.map((rest, i) => (
-                                                <div key={i} className="actividad-card">
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                                        <span style={{ fontSize: '28px' }}>🍽️</span>
-                                                        <div>
-                                                            <strong style={{ display: 'block', color: '#0f172a', fontSize: '16px' }}>{rest.nombre}</strong>
-                                                            <span style={{ fontSize: '13px', color: '#64748b' }}>Cocina {rest.tipoComida}</span>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 1fr) 1fr', gap: '20px' }}>
+                                            {/* Sub-Mapa de Restaurantes */}
+                                            <div style={{ height: '400px', borderRadius: '20px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
+                                                <MapContainer center={epicentro} zoom={14} style={{ height: '100%', width: '100%', zIndex: 1 }}>
+                                                    <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+                                                    {restaurantes.map((rest, i) => {
+                                                        const pos = getOffsetCoords(rest.nombre || String(i), 0.008);
+                                                        return (
+                                                            <Marker key={i} position={pos} icon={RestaurantIcon}>
+                                                                <Popup closeButton={false} className="custom-popup-detalle">
+                                                                    <div style={{ padding: '8px', textAlign: 'center', minWidth: '150px' }}>
+                                                                        {rest.image && <img src={rest.image} alt="Restaurante" style={{width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px', marginBottom: '8px'}} />}
+                                                                        <strong style={{ fontSize: '15px', display: 'block', color: '#0f172a' }}>{rest.nombre}</strong>
+                                                                        <span style={{ fontSize: '12px', display: 'block', color: '#64748b', marginBottom: '4px' }}>Culinaria {rest.tipoComida}</span>
+                                                                        <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                                                                            <span style={{ fontSize: '13px', color: '#f59e0b', fontWeight: 'bold' }}>⭐ {rest.rating}</span>
+                                                                            <span style={{ fontSize: '13px', color: '#10b981', fontWeight: 'bold' }}>{rest.precio || '$$'}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </Popup>
+                                                            </Marker>
+                                                        )
+                                                    })}
+                                                </MapContainer>
+                                            </div>
+
+                                            {/* Listado de Restaurantes Scrollable */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '400px', overflowY: 'auto', paddingRight: '10px' }}>
+                                                {restaurantes.map((rest, i) => (
+                                                    <div key={i} className="actividad-card">
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                            <span style={{ fontSize: '28px' }}>🍽️</span>
+                                                            <div>
+                                                                <strong style={{ display: 'block', color: '#0f172a', fontSize: '16px' }}>{rest.nombre}</strong>
+                                                                <span style={{ fontSize: '13px', color: '#64748b' }}>Cocina {rest.tipoComida}</span>
+                                                            </div>
                                                         </div>
+                                                        <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#6366f1' }}>⭐ {rest.rating}</span>
                                                     </div>
-                                                    <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#6366f1' }}>⭐ {rest.rating}</span>
-                                                </div>
-                                            ))}
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
                                 </div>

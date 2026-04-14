@@ -144,6 +144,10 @@ const Destinos = () => {
                     <span className="destinos-nav-icon">🗺️</span>
                     <span className="destinos-nav-label">Itinerario</span>
                 </div>
+                <div onClick={() => navigate('/mapa')} className="destinos-nav-item" style={{ color: '#94a3b8' }}>
+                    <span className="destinos-nav-icon">🌍</span>
+                    <span className="destinos-nav-label">Globo</span>
+                </div>
                 <div onClick={() => handleNavClick('alertas')} className="destinos-nav-item" style={{ color: seccionActiva === 'alertas' ? '#6366f1' : '#94a3b8' }}>
                     <span className="destinos-nav-icon">🔔</span>
                     <span className="destinos-nav-label">Alertas</span>

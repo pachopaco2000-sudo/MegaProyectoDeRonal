@@ -446,3 +446,14 @@
     font-weight: 800;
     color: var(--aura-primary);
 }
+
+/* Custom Popup for Leaflet inside Detalle */
+.custom-popup-detalle .leaflet-popup-content-wrapper {
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.custom-popup-detalle .leaflet-popup-content {
+    margin: 5px;
+    line-height: 1.4;
+}

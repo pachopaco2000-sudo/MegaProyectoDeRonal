@@ -3,6 +3,8 @@ import { UserContext } from '../context/UserContext';
 import { useNotification } from '../context/NotificationContext';
 import { supabase } from '../services/supabaseClient';
 import ConfirmModal from '../components/ConfirmModal';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import './styles/Itinerario.css';
 
 const Itinerario = () => {
@@ -16,6 +18,7 @@ const Itinerario = () => {
     const [isBuildModalOpen, setIsBuildModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editingPlanId, setEditingPlanId] = useState(null);
+    const [expandedPlanId, setExpandedPlanId] = useState(null);
     const [newPlan, setNewPlan] = useState({
         destino: '',
         ubicacion: '',
@@ -197,6 +200,197 @@ const Itinerario = () => {
         showNotification("¡Enlace dinámico copiado! Compártelo con tu grupo.", "success");
     };
 
+    const toggleExpand = (id) => {
+        if (expandedPlanId === id) setExpandedPlanId(null);
+        else setExpandedPlanId(id);
+    };
+
+    const calcularDias = (inicio, fin) => {
+        if (!inicio || !fin) return 3; // Estimado por defecto
+        const d1 = new Date(inicio);
+        const d2 = new Date(fin);
+        const diff = d2 - d1;
+        const days = Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1;
+        return days > 0 ? days : 1;
+    };
+
+    const formatearFecha = (fecha) => {
+        if (!fecha) return 'Por Definir';
+        return new Date(fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+    };
+
+    const generateClientReport = () => {
+        if (!misReservas || misReservas.length === 0) {
+            showNotification("Aún no tienes aventuras para exportar.", "warning");
+            return;
+        }
+
+        const csvRows = [];
+        // Header
+        csvRows.push("Ticket ID,Destino,Ubicacion,Estado,Personas,Fecha Inicio,Fecha Regreso");
+
+        misReservas.forEach(r => {
+            const row = [
+                r.id,
+                `"${r.destino}"`,
+                `"${r.ubicacion}"`,
+                r.estado,
+                r.personas || 1,
+                r.fechaInicio || 'Pendiente',
+                r.fechaFin || 'Pendiente'
+            ];
+            csvRows.push(row.join(','));
+        });
+
+        const csvString = csvRows.join('\n');
+        const blob = new Blob(["\uFEFF" + csvString], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', `AuraTravel_Mis_Aventuras_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showNotification("¡Diario exportado exitosamente!", "success");
+    };
+
+    const generateClientReportPDF = () => {
+        if (!misReservas || misReservas.length === 0) {
+            showNotification("Aún no tienes aventuras para exportar.", "warning");
+            return;
+        }
+
+        const doc = new jsPDF('landscape');
+        
+        doc.setFontSize(18);
+        doc.setTextColor(40);
+        doc.text("Aura Travel - Libro de Viajes", 14, 22);
+        
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Pasajero: ${user?.correo}`, 14, 30);
+        doc.text(`Fecha de Emisión: ${new Date().toLocaleDateString()}`, 14, 38);
+
+        const tableColumn = ["Ticket ID", "Destino", "Zona", "Estado", "Aventureros", "Salida", "Regreso"];
+        const tableRows = [];
+
+        misReservas.forEach(r => {
+            const ticketRow = [
+                String(r.id).substring(0,8),
+                r.destino,
+                r.ubicacion,
+                r.estado,
+                r.personas || 1,
+                r.fechaInicio ? new Date(r.fechaInicio).toLocaleDateString() : 'Pendiente',
+                r.fechaFin ? new Date(r.fechaFin).toLocaleDateString() : 'Pendiente'
+            ];
+            tableRows.push(ticketRow);
+        });
+
+        doc.autoTable({
+            head: [tableColumn],
+            body: tableRows,
+            startY: 45,
+            theme: 'grid',
+            styles: { fontSize: 9, cellPadding: 4 },
+            headStyles: { fillColor: [99, 102, 241] } // Color primario de Aura (Indigo)
+        });
+
+        doc.save(`AuraTravel_Mis_Aventuras_${new Date().toISOString().split('T')[0]}.pdf`);
+        showNotification("¡Diario exportado a PDF!", "success");
+    };
+
+    const renderDiaLista = (plan) => {
+        const diasTotales = calcularDias(plan.fechaInicio, plan.fechaFin);
+        const dias = [];
+        
+        for (let i = 1; i <= diasTotales; i++) {
+            let titulo = "Exploración Libre";
+            let desc = "Día para conocer los alrededores a tu ritmo.";
+            let icon = "🗺️";
+
+            if (i === 1) {
+                titulo = "Llegada al Destino"; desc = "Check-in y aclimatación en " + plan.destino; icon = "🛬";
+            } else if (i === diasTotales) {
+                titulo = "Regreso a Casa"; desc = "Preparativos finales y vuelta."; icon = "🛫";
+            } else if (i === 2) {
+                titulo = "Tour Principal"; desc = "Recorrido por los puntos más icónicos."; icon = "📸";
+            }
+
+            dias.push(
+                <div key={i} className="day-timeline">
+                    <div className="day-timeline-node"></div>
+                    <h4 className="day-header">Día {i}</h4>
+                    <div className="day-activity-card">
+                        <div className="day-activity-icon">{icon}</div>
+                        <div className="day-activity-info">
+                            <h5>{titulo}</h5>
+                            <p>{desc}</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        return dias;
+    };
+
+    const renderTicket = (item) => {
+        const isExpanded = expandedPlanId === item.id;
+        return (
+            <div key={item.id} className="ticket-wrapper">
+                <div className="ticket-main">
+                    <div className="ticket-header">
+                        <h3 className="ticket-dest-title">{item.destino}</h3>
+                        <span className={`ticket-status ${item.estado.toLowerCase().replace(/\s/g, '')}`}>{item.estado}</span>
+                    </div>
+                    
+                    <div className="ticket-body">
+                        <div className="ticket-info-block">
+                            <span className="ticket-info-label">País / Zona</span>
+                            <span className="ticket-info-value">{item.ubicacion}</span>
+                        </div>
+                        <div className="ticket-info-block">
+                            <span className="ticket-info-label">Fechas</span>
+                            <span className="ticket-info-value">
+                                {formatearFecha(item.fechaInicio)} - {formatearFecha(item.fechaFin)}
+                            </span>
+                        </div>
+                        <div className="ticket-info-block">
+                            <span className="ticket-info-label">Aventureros</span>
+                            <span className="ticket-info-value">{item.personas} Pasajero(s)</span>
+                        </div>
+                    </div>
+
+                    <div className="ticket-actions">
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <button onClick={() => toggleExpand(item.id)} className="ticket-expand-btn">
+                                {isExpanded ? 'Ocultar Día a Día' : 'Ver Día a Día'}
+                            </button>
+                            {item.estado === 'Plan Personalizado' && (
+                                <button onClick={() => openEditModal(item)} className="ticket-expand-btn" style={{ background: 'transparent' }} title="Editar">✏️</button>
+                            )}
+                        </div>
+                        <div>
+                            {item.estado === 'Pendiente' && (
+                                <button onClick={() => handleCancelarReserva(item.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: '#ef4444', fontWeight: 'bold', marginRight: '10px' }} title="Cancelar orden">Cancelar</button>
+                            )}
+                            <button onClick={() => handleEliminarPlan(item.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px' }} title="Eliminar">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+                
+                {isExpanded && (
+                    <div className="itinerary-details-panel">
+                        <p style={{ margin: '0 0 20px 0', color: '#64748b', fontSize: '14px' }}>Itinerario sugerido para {calcularDias(item.fechaInicio, item.fechaFin)} días en {item.destino}:</p>
+                        {renderDiaLista(item)}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <div className="anim-fade">
             <ConfirmModal 
@@ -211,7 +405,11 @@ const Itinerario = () => {
             <div className="itinerario-banner">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h1 style={{ margin: 0, fontSize: '24px' }}>Mis Aventuras Aura</h1>
-                    <button onClick={handleShare} style={{ background: '#fff', color: '#6366f1', border: 'none', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>🔗 Compartir</button>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button onClick={generateClientReport} style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>📄 CSV</button>
+                        <button onClick={generateClientReportPDF} style={{ background: '#f43f5e', color: '#fff', border: '1px solid #e11d48', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>📑 PDF</button>
+                        <button onClick={handleShare} style={{ background: '#fff', color: '#6366f1', border: 'none', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>🔗 Compartir</button>
+                    </div>
                 </div>
             </div>
             
@@ -233,26 +431,7 @@ const Itinerario = () => {
                                 Aún no has planeado ningún escape manual.
                             </div>
                         ) : (
-                            <div className="itinerario-timeline">
-                                {planesFuturos.map((plan, index) => (
-                                    <div key={plan.id} className="itinerario-day" style={{ marginBottom: '20px' }}>
-                                        <div className="itinerario-dot" style={{ backgroundColor: '#a855f7' }}>📍</div>
-                                        <div style={{ flex: 1 }}>
-                                            <h4 style={{ margin: '0 0 4px 0' }}>{plan.destino}</h4>
-                                            <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>📌 {plan.ubicacion} • 👥 {plan.personas} Aventureros</p>
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-                                            <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#a855f7', background: '#f3e8ff', padding: '4px 8px', borderRadius: '8px' }}>
-                                                Plan Guardado
-                                            </div>
-                                            <div style={{ display: 'flex', gap: '10px' }}>
-                                                <button onClick={() => openEditModal(plan)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }} title="Editar">✏️</button>
-                                                <button onClick={() => handleEliminarPlan(plan.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }} title="Eliminar">🗑️</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                            planesFuturos.map(plan => renderTicket(plan))
                         )}
                     </div>
                 )}
@@ -263,37 +442,10 @@ const Itinerario = () => {
                             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b', background: '#f8fafc', borderRadius: '20px', border: '1px dashed #cbd5e1' }}>
                                 <div style={{ fontSize: '40px', marginBottom: '10px' }}>🧳</div>
                                 <h3 style={{ margin: '0 0 10px 0', color: '#0f172a' }}>Tu historial está vacío</h3>
-                                <p style={{ margin: 0, fontSize: '14px' }}>Aquí aparecerán tus reservas pagadas una vez que explores destinos y confirmes una reservación comercial.</p>
+                                <p style={{ margin: 0, fontSize: '14px' }}>Aquí aparecerán tus reservas confirmadas con su detalle de itinerario.</p>
                             </div>
                         ) : (
-                            <div className="itinerario-timeline">
-                                {historialViajes.map((reserva, index) => (
-                                    <div key={reserva.id} className="itinerario-day" style={{ marginBottom: '20px' }}>
-                                        <div className="itinerario-dot" style={{ backgroundColor: '#6366f1' }}>{index + 1}</div>
-                                        <div style={{ flex: 1 }}>
-                                            <h4 style={{ margin: '0 0 4px 0' }}>{reserva.destino}</h4>
-                                            <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>
-                                                📌 {reserva.ubicacion} {reserva.fechaInicio ? `• 📅 ${reserva.fechaInicio}` : ''}
-                                            </p>
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-                                            <div style={{
-                                                padding: '4px 8px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold',
-                                                backgroundColor: reserva.estado === 'Confirmada' ? '#2dd4bf22' : (reserva.estado === 'Cancelada' ? '#fee2e2' : '#fbbf2422'),
-                                                color: reserva.estado === 'Confirmada' ? '#0d9488' : (reserva.estado === 'Cancelada' ? '#ef4444' : '#b45309')
-                                            }}>
-                                                {reserva.estado}
-                                            </div>
-                                            <div style={{ display: 'flex', gap: '10px' }}>
-                                                {reserva.estado === 'Pendiente' && (
-                                                    <button onClick={() => handleCancelarReserva(reserva.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: '#ef4444', textDecoration: 'underline', fontWeight: 'bold' }} title="Cancelar orden">Cancelar</button>
-                                                )}
-                                                <button onClick={() => handleEliminarPlan(reserva.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }} title="Eliminar del historial">🗑️</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                            historialViajes.map(reserva => renderTicket(reserva))
                         )}
                     </div>
                 )}
